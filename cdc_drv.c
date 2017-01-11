@@ -34,7 +34,6 @@
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_crtc.h"
-#include "altera_pll.h"
 
 static const struct platform_device_id cdc_id_table[] = {
   { "cdc", 0 },
@@ -84,21 +83,6 @@ static int cdc_unload(struct drm_device *dev) {
   cdc_exit(cdc->drv);
 
   return 0;
-}
-
-
-static void cdc_clock_init(struct cdc_device *cdc)
-{
-  struct device_node *np = cdc->dev->of_node;
-  struct device_node *clk_node;
-
-  clk_node = of_parse_phandle(np, "pixel-clock", 0);
-  if(!clk_node)
-  {
-    dev_err(cdc->dev, "Could not find pixel clock PLL\n");
-  }
-
-  cdc->pclk = altera_pll_clk_create(cdc->dev, clk_node);
 }
 
 
@@ -152,7 +136,11 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
     goto done;
   }
 
-  cdc_clock_init(cdc);
+  cdc->pclk = devm_clk_get(&pdev->dev, NULL);
+  if(IS_ERR(cdc->pclk)) {
+    dev_err(&pdev->dev, "failed to initialize pixel clock\n");
+    return PTR_ERR(cdc->pclk);
+  }
 
   ret = cdc_modeset_init(cdc);
   if(ret < 0)

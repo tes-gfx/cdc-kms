@@ -10,6 +10,7 @@
  * (at your option) any later version.
  */
 
+#include <linux/clk.h>
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
@@ -23,7 +24,6 @@
 #include "cdc_kms.h"
 #include "cdc_plane.h"
 #include "cdc_hw.h"
-#include "altera_pll.h"
 
 
 static struct cdc_device *to_cdc_dev(struct drm_crtc *c)

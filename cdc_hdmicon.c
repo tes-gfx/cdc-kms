@@ -18,7 +18,6 @@
 
 #include "cdc_drv.h"
 #include "cdc_encoder.h"
-#include "altera_pll.h"
 
 
 #define to_slave_funcs(e)       (to_cdc_encoder(e)->slave.slave_funcs)

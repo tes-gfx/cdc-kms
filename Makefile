@@ -8,7 +8,6 @@ cdc-y := cdc_drv.o \
          cdc_hdmienc.o \
          cdc_encoder.o \
          cdc_hw.o \
-         altera_pll.o \
          hw/cdc_global.o \
          hw/cdc_layer.o \
          hw/cdc_int.o
@@ -27,3 +26,7 @@ clean:
 	rm -f Module.markers Module.symvers modules.order
 	rm -rf .tmp_versions Modules.symvers
 	rm ./hw/*.o
+
+.PHONY:
+deploy: all
+	scp *.ko root@$(BOARD_IP):/lib/modules/4.1.22-ltsi-altera/extra/
