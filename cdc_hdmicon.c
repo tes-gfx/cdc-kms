@@ -44,16 +44,26 @@ static int cdc_hdmi_connector_mode_valid(struct drm_connector *connector,
   struct drm_encoder *encoder = cdc_encoder_to_drm_encoder(con->encoder);
   struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
   long rate;
+  long mode_rate;
 
   dev_dbg(con->cdc->dev, "%s\n", __func__);
 
-  rate = clk_round_rate(con->cdc->pclk, mode->clock * 1000);
+  mode_rate = mode->clock * 1000;
+  rate = clk_round_rate(con->cdc->pclk, mode_rate);
 
   if(rate <= 0)
   {
     return MODE_CLOCK_RANGE;
   }
 
+  if(rate < mode_rate) {
+    return MODE_CLOCK_HIGH;
+  }
+  else if(rate > mode_rate) {
+    return MODE_CLOCK_LOW;
+  }
+
+  // xxx: force width of 800
   if(mode->hdisplay != 800)
     return MODE_H_ILLEGAL;
 
