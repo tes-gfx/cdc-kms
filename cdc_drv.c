@@ -114,6 +114,12 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
 
   cdc_init_dev(cdc);
 
+  cdc->pclk = devm_clk_get(&pdev->dev, NULL);
+  if(IS_ERR(cdc->pclk)) {
+    dev_err(&pdev->dev, "failed to initialize pixel clock\n");
+    return PTR_ERR(cdc->pclk);
+  }
+
   mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
   cdc->mmio = devm_ioremap_resource(&pdev->dev, mem);
   dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start, cdc->mmio);
@@ -134,12 +140,6 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
   {
     dev_err(&pdev->dev, "failed to initialize vblank\n");
     goto done;
-  }
-
-  cdc->pclk = devm_clk_get(&pdev->dev, NULL);
-  if(IS_ERR(cdc->pclk)) {
-    dev_err(&pdev->dev, "failed to initialize pixel clock\n");
-    return PTR_ERR(cdc->pclk);
   }
 
   ret = cdc_modeset_init(cdc);
