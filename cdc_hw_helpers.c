@@ -14,7 +14,7 @@
 
 #include "cdc_drv.h"
 #include "cdc_hw.h"
-#include <cdc_base.h>
+#include "cdc_regs.h"
 
 
 static u16 calculateScalingFactor(u16 in, u16 out)
@@ -218,9 +218,9 @@ bool cdc_hw_triggerShadowReload(struct cdc_device *cdc, bool in_vblank)
 		{
 			cdc_write_reg(cdc, CDC_REG_GLOBAL_SHADOW_RELOAD, 1);
 		}
-		return CDC_TRUE;
+		return true;
 	}
-	return CDC_FALSE;
+	return false;
 }
 
 
@@ -243,19 +243,19 @@ void cdc_hw_setTiming(struct cdc_device *cdc, u16 a_h_sync, u16 a_h_bPorch, u16 
 	total_width  = (a_h_fPorch << 16) + a_v_fPorch + active_width;
 
 	// build up the sync polarity flags
-	if(a_neg_hsync == CDC_TRUE)
+	if(a_neg_hsync == true)
 	{
 	  polarity_mask |= CDC_REG_GLOBAL_CONTROL_HSYNC;
 	}
-	if(a_neg_vsync == CDC_TRUE)
+	if(a_neg_vsync == true)
 	{
 	  polarity_mask |= CDC_REG_GLOBAL_CONTROL_VSYNC;
 	}
-	if(a_neg_blank == CDC_TRUE)
+	if(a_neg_blank == true)
 	{
 	  polarity_mask |= CDC_REG_GLOBAL_CONTROL_BLANK;
 	}
-	if(a_inv_clk == CDC_TRUE)
+	if(a_inv_clk == true)
 	{
 	  polarity_mask |= CDC_REG_GLOBAL_CONTROL_CLK_POL;
 	}

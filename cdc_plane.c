@@ -17,8 +17,7 @@
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 
-#include <cdc.h>
-#include <cdc_base.h>
+#include "cdc_regs.h"
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_hw_helpers.h"

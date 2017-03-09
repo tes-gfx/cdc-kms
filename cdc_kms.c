@@ -28,8 +28,7 @@
 #include <linux/of_graph.h>
 #include <linux/wait.h>
 
-#include <cdc.h>
-#include <cdc_base.h>
+#include "cdc_regs.h"
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_crtc.h"

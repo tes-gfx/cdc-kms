@@ -13,7 +13,7 @@
 #include <linux/slab.h>
 #include "cdc_drv.h"
 #include "cdc_crtc.h"
-#include <cdc_base.h>
+#include "cdc_regs.h"
 
 
 u32 cdc_read_reg(struct cdc_device *cdc, u32 reg)

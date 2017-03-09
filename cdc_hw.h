@@ -13,12 +13,12 @@
 #ifndef CDC_HW_H_
 #define CDC_HW_H_
 
-#include <cdc.h>
 
 u32 cdc_read_reg(struct cdc_device *cdc, u32 reg);
 void cdc_write_reg(struct cdc_device *cdc, u32 reg, u32 val);
 u32 cdc_read_layer_reg(struct cdc_device *cdc, int layer, u32 reg);
 void cdc_write_layer_reg(struct cdc_device *cdc, int layer, u32 reg, u32 val);
 void cdc_irq_set(struct cdc_device *cdc, cdc_irq_type irq, bool enable);
+
 
 #endif /* CDC_HW_H_ */

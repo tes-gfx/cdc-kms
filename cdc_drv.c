@@ -27,9 +27,7 @@
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 
-
-#include <cdc.h>
-#include <cdc_base.h>
+#include "cdc_regs.h"
 
 #include "cdc_drv.h"
 #include "cdc_kms.h"
@@ -65,7 +63,7 @@ static void cdc_layer_init(struct cdc_device *cdc) {
   cdc->planes = devm_kzalloc(cdc->dev, sizeof(*cdc->planes) * cdc->hw.layer_count, GFP_KERNEL);
   for(i = 0; i < cdc->hw.layer_count; ++i) {
     dev_dbg(cdc->dev, "Initializing layer %d\n", i);
-    cdc_hw_layer_setEnabled(cdc, i, CDC_FALSE);
+    cdc_hw_layer_setEnabled(cdc, i, false);
     cdc->planes[i].hw_idx = i;
     cdc->planes[i].cdc = cdc;
     cdc->planes[i].used = false;
@@ -157,7 +155,7 @@ bool cdc_init_irq(struct cdc_device *cdc)
     dev_err(cdc->dev, "Failed to register IRQ\n");
     return false;
   }
-  return CDC_TRUE;
+  return true;
 }
 
 

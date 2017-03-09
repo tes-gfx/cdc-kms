@@ -16,8 +16,8 @@
 
 #include <linux/types.h>
 
-#include <cdc.h>
 #include "cdc_drv.h"
+#include "cdc_regs.h"
 
 
 void cdc_hw_setPixelFormat(struct cdc_device *cdc, int layer, u8 format);

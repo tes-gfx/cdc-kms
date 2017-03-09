@@ -15,8 +15,7 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_atomic_helper.h>
 
-#include <cdc.h>
-#include <cdc_base.h>
+#include "cdc_regs.h"
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_lvdscon.h"

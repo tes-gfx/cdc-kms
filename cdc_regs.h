@@ -1,7 +1,7 @@
 /*
- * cdc_base.h  --  CDC Display Controller base definitions
+ * cdc_regs.h  --  CDC Display Controller register definitions
  *
- * Copyright (C) 2007 - 2016 TES Electronic Solutions GmbH
+ * Copyright (C) 2007 - 2017 TES Electronic Solutions GmbH
  * Author: Christian Thaler <christian.thaler@tes-dst.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -10,10 +10,8 @@
  * (at your option) any later version.
  */
 
-#ifndef CDC_BASE_H_INCLUDED
-#define CDC_BASE_H_INCLUDED
-
-#include <cdc.h>
+#ifndef _CDC_REGS_H_
+#define _CDC_REGS_H_
 
 #ifndef NULL
   #define NULL ((void *) 0)
@@ -105,4 +103,54 @@
 #define CDC_REG_LAYER_CONTROL_ENABLE                  0x00000001u
 
 
-#endif // CDC_BASE_H_INCLUDED
+/*--------------------------------------------------------------------------
+ * Enum: cdc_irq_type
+ *  IRQ type (see <cdc_registerISR>)
+ *
+ *  CDC_IRQ_LINE                   - Programmable Scanline Interrupt
+ *  CDC_IRQ_FIFO_UNDERRUN          - Indicates a fifo underrun
+ *  CDC_IRQ_BUS_ERROR              - Indicates a bus error
+ *  CDC_IRQ_RELOAD                 - Issued on every shadow reload
+ *  CDC_IRQ_SLAVE_TIMING_NO_SIGNAL - Issued if slave timing mode is enabled, but
+ *                                   no signal is detected
+ *  CDC_IRQ_SLAVE_TIMING_NO_SYNC   - Issued if slave timing mode is enabled, but
+ *                                   CDC is currently not in sync with external sync source
+ */
+typedef enum {
+  CDC_IRQ_LINE                   = 0x01,
+  CDC_IRQ_FIFO_UNDERRUN          = 0x02,
+  CDC_IRQ_BUS_ERROR              = 0x04,
+  CDC_IRQ_RELOAD                 = 0x08,
+  CDC_IRQ_SLAVE_TIMING_NO_SIGNAL = 0x10,
+  CDC_IRQ_SLAVE_TIMING_NO_SYNC   = 0x20,
+} cdc_irq_type;
+
+
+/*--------------------------------------------------------------------------
+ * Enum: cdc_blend_factor
+ *  Blend factor used for blending between layers (see <cdc_layer_setBlendMode>)
+ *
+ *  CDC_BLEND_ONE                           - Blend factor of 1.0
+ *  CDC_BLEND_ZERO                          - Blend factor of 0.0
+ *  CDC_BLEND_PIXEL_ALPHA                   - Blend factor is taken from pixel's alpha value
+ *  CDC_BLEND_PIXEL_ALPHA_INV               - Blend factor of 1.0 - pixel's alpha value
+ *  CDC_BLEND_CONST_ALPHA                   - Constant alpha as blend factor
+ *  CDC_BLEND_CONST_ALPHA_INV               - 1.0 - Constant alpha as blend factor
+ *  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA     - Pixel alpha * constant alpha as blend factor
+ *  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV - 1.0 - (Pixel alpha * constant alpha as blend factor)
+ */
+typedef enum {
+  CDC_BLEND_ONE                           = 0,
+  CDC_BLEND_ZERO                          = 1,
+  CDC_BLEND_PIXEL_ALPHA                   = 2,
+  CDC_BLEND_PIXEL_ALPHA_INV               = 3,
+  CDC_BLEND_CONST_ALPHA                   = 4,
+  CDC_BLEND_CONST_ALPHA_INV               = 5,
+  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA     = 6,
+  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV = 7,
+} cdc_blend_factor;
+
+static const u8 cdc_formats_bpp[] = {4, 3, 2, 2, 2, 2, 1, 1};
+
+
+#endif // _CDC_REGS_H_

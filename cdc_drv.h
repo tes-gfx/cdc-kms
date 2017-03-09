@@ -16,13 +16,14 @@
 #include <video/videomode.h>
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
-#include <cdc.h>
+
 
 /* CDC HW limitations */
 #define CDC_MAX_WIDTH  2047u
 #define CDC_MAX_HEIGHT 2047u
 #define CDC_MAX_PITCH  8192u
 #define CDC_OFFSET_LAYER 0x20
+
 
 struct cdc_device;
 struct cdc_format;
@@ -46,7 +47,7 @@ struct cdc_plane {
   u16 window_x;
   u16 window_y;
   u32 control;
-  cdc_uint8 alpha;
+  u8 alpha;
 };
 
 

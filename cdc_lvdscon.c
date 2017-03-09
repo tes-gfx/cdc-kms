@@ -19,8 +19,7 @@
 #include <video/of_display_timing.h>
 #include <video/videomode.h>
 
-#include <cdc.h>
-#include <cdc_base.h>
+#include "cdc_regs.h"
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_encoder.h"

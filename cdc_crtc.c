@@ -18,8 +18,7 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 
-#include <cdc.h>
-#include <cdc_base.h>
+#include "cdc_regs.h"
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_plane.h"
@@ -36,7 +35,7 @@ static struct cdc_device *to_cdc_dev(struct drm_crtc *c)
 static void cdc_crtc_set_display_timing(struct drm_crtc *crtc) {
   struct cdc_device *cdc = to_cdc_dev(crtc);
   const struct drm_display_mode *mode = &crtc->state->adjusted_mode;
-  cdc_bool neg_hsync, neg_vsync, neg_blank, inv_clock;
+  bool neg_hsync, neg_vsync, neg_blank, inv_clock;
 
   dev_dbg(cdc->dev, "%s\n", __func__);
 
@@ -53,8 +52,8 @@ static void cdc_crtc_set_display_timing(struct drm_crtc *crtc) {
   dev_dbg(cdc->dev, "\t\tvbackporch: %d\n", mode->crtc_vblank_end - mode->crtc_vsync_end);
   dev_dbg(cdc->dev, "\t\tvfrontporch: %d\n", mode->crtc_vsync_start - mode->crtc_vdisplay);
 
-  neg_hsync = (mode->flags & DRM_MODE_FLAG_NHSYNC) ? CDC_TRUE : CDC_FALSE;
-  neg_vsync = (mode->flags & DRM_MODE_FLAG_NVSYNC) ? CDC_TRUE : CDC_FALSE;
+  neg_hsync = (mode->flags & DRM_MODE_FLAG_NHSYNC) ? true : false;
+  neg_vsync = (mode->flags & DRM_MODE_FLAG_NVSYNC) ? true : false;
   neg_blank = cdc->neg_blank;
   inv_clock = cdc->neg_pixclk;
 
