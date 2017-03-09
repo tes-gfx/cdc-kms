@@ -142,8 +142,6 @@ static void cdc_plane_atomic_update(struct drm_plane *plane,
   // Setup the plane if a crtc is bound to it
   if(new_state->crtc)
   {
-    plane->crtc = new_state->crtc;
-
     /* todo: find out what to change and only change that, like with the window */
     cdc_plane_setup(plane);
 
