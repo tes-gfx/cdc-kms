@@ -166,7 +166,7 @@ void cdc_crtc_start(struct drm_crtc *crtc)
 
   dev_dbg(cdc->dev, "%s\n", __func__);
 
-  if(cdc->enabled) {
+  if(cdc->hw.enabled) {
     return;
   }
 
@@ -178,7 +178,6 @@ void cdc_crtc_start(struct drm_crtc *crtc)
   drm_crtc_vblank_on(crtc);
 
   cdc_hw_setEnabled(cdc, true);
-  cdc->enabled = true;
 }
 
 
@@ -188,7 +187,7 @@ void cdc_crtc_stop(struct drm_crtc *crtc)
 
   dev_dbg(cdc->dev, "%s\n", __func__);
 
-  if(!cdc->enabled) {
+  if(!cdc->hw.enabled) {
     return;
   }
 
@@ -196,7 +195,6 @@ void cdc_crtc_stop(struct drm_crtc *crtc)
   drm_crtc_vblank_off(crtc);
 
   cdc_hw_setEnabled(cdc, false);
-  cdc->enabled = false;
 }
 
 
@@ -210,7 +208,7 @@ static void cdc_crtc_enable(struct drm_crtc *crtc)
 
   dev_dbg(cdc->dev, "%s\n", __func__);
 
-  if(cdc->enabled)
+  if(cdc->hw.enabled)
     return;
 
   cdc_crtc_start(crtc);
@@ -220,8 +218,6 @@ static void cdc_crtc_enable(struct drm_crtc *crtc)
 
   /* Enable line IRQ together with CRTC */
   cdc_irq_set(cdc, CDC_IRQ_LINE, true);
-
-  cdc->enabled = true;
 }
 
 
@@ -232,15 +228,13 @@ static void cdc_crtc_disable(struct drm_crtc *crtc)
 
   dev_dbg(cdc->dev, "%s\n", __func__);
 
-  if(!cdc->enabled)
+  if(!cdc->hw.enabled)
     return;
 
   cdc_crtc_stop(crtc);
 
   cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
   cdc_irq_set(cdc, CDC_IRQ_LINE, false);
-
-  cdc->enabled = false;
 };
 
 
@@ -353,7 +347,7 @@ int cdc_crtc_create(struct cdc_device *cdc)
 
   /* TODO: add support for programmable clock? */
 
-  cdc->enabled = false;
+  cdc_hw_setEnabled(cdc ,false);
 
   init_waitqueue_head(&cdc->flip_wait);
 

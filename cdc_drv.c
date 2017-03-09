@@ -100,6 +100,67 @@ static int cdc_unload(struct drm_device *dev) {
 }
 
 
+static irqreturn_t cdc_irq(int irq, void *arg)
+{
+  struct cdc_device *cdc = (struct cdc_device *)arg;
+  u32 status;
+
+  status = cdc_read_reg(cdc, CDC_REG_GLOBAL_IRQ_STATUS);
+  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, status);
+
+  if(status & CDC_IRQ_LINE)
+  {
+    cdc_crtc_irq(&cdc->crtc);
+  }
+  if(status & CDC_IRQ_BUS_ERROR)
+  {
+    dev_err_ratelimited(cdc->dev, "BUS error IRQ triggered\n");
+  }
+  if(status & CDC_IRQ_FIFO_UNDERRUN)
+  {
+    // disable underrun IRQ to prevent message flooding
+    cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
+
+    dev_err_ratelimited(cdc->dev, "FIFO underrun\n");
+  }
+  if(status & CDC_IRQ_SLAVE_TIMING_NO_SIGNAL)
+  {
+	  dev_err_ratelimited(cdc->dev, "SLAVE no signal\n");
+  }
+  if(status & CDC_IRQ_SLAVE_TIMING_NO_SYNC)
+  {
+	  dev_err_ratelimited(cdc->dev, "SLAVE no sync\n");
+  }
+
+  return IRQ_HANDLED;
+}
+
+
+bool cdc_init_irq(struct cdc_device *cdc)
+{
+  struct platform_device *pdev = to_platform_device(cdc->dev);
+
+  int irq;
+  int ret;
+
+  irq = platform_get_irq(pdev, 0);
+  if(irq < 0) {
+    dev_err(cdc->dev, "Could not get platform IRQ number\n");
+    return false;
+  }
+
+  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, cdc->hw.irq_enabled);
+  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0x1f);
+
+  ret = devm_request_irq(cdc->dev, irq, cdc_irq, 0, dev_name(cdc->dev), cdc);
+  if(ret < 0) {
+    dev_err(cdc->dev, "Failed to register IRQ\n");
+    return false;
+  }
+  return CDC_TRUE;
+}
+
+
 static int cdc_load(struct drm_device *dev, unsigned long flags)
 {
   struct platform_device *pdev = dev->platformdev;
@@ -153,8 +214,7 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
 
   cdc_hw_resetRegisters(cdc);
 
-  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, cdc->hw.irq_enabled);
-  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0x1f);
+  cdc_init_irq(cdc);
 
   ret = drm_vblank_init(dev, 1);
   if(ret < 0)
@@ -351,9 +411,6 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
       struct hack_set_cb *set_cb = (struct hack_set_cb*) stack_data;
 
-//      cdc_layer_setCBAddress(cdc->drv, 0, (unsigned int) set_cb->phy_addr);
-//      cdc_layer_setCBSize(cdc->drv, 0, set_cb->width, set_cb->height, set_cb->pitch);
-//      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
       cdc_hw_setCBAddress(cdc, 0, (unsigned int) set_cb->phy_addr);
       cdc_hw_layer_setCBSize(cdc, 0, set_cb->width, set_cb->height, set_cb->pitch);
       cdc_hw_triggerShadowReload(cdc, true);
@@ -364,9 +421,6 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
       struct hack_set_winpos *winpos = (struct hack_set_winpos*) stack_data;
 
-//      cdc_layer_setWindow(cdc->drv, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
-//      cdc_layer_setEnabled(cdc->drv, 0, CDC_TRUE);
-//      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
       cdc_hw_setWindow(cdc, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
       cdc_hw_layer_setEnabled(cdc, 0, true);
       cdc_hw_triggerShadowReload(cdc, true);
@@ -377,9 +431,6 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
       struct hack_set_alpha *alpha = (struct hack_set_alpha*) stack_data;
 
-//      cdc_layer_setBlendMode(cdc->drv, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
-//      cdc_layer_setConstantAlpha(cdc->drv, 0, alpha->alpha);
-//      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
       cdc_hw_setBlendMode(cdc, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
       cdc_hw_layer_setConstantAlpha(cdc, 0, alpha->alpha);
       cdc_hw_triggerShadowReload(cdc, true);

@@ -75,7 +75,6 @@ struct cdc_device {
   int dpms;
   bool wait_for_vblank;
   bool early_poll; // did a poll occur before FBDEV was setup?
-  bool enabled;
   bool started;
   bool neg_blank;
   bool neg_pixclk;

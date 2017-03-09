@@ -130,6 +130,8 @@ void cdc_hw_layer_setEnabled(struct cdc_device *cdc, int layer, bool enable)
 	else
 		cdc->planes[layer].control &= ~CDC_REG_LAYER_CONTROL_ENABLE;
 
+	cdc->planes[layer].enabled = enable;
+
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_CONTROL, cdc->planes[layer].control);
 }
 
@@ -164,6 +166,7 @@ void cdc_hw_resetRegisters(struct cdc_device *cdc)
   // initialize per layer registers
   for(i=0; i<cdc->hw.layer_count;i++)
   {
+	  dev_info(cdc->dev, "RESET LAYER CONTROL\n");
     cdc_write_layer_reg(cdc, i,  CDC_REG_LAYER_CONTROL,      0);
     cdc->planes[i].control = 0;
 

@@ -45,37 +45,44 @@ void cdc_plane_setup_fb(struct cdc_plane *plane)
 }
 
 
+void cdc_plane_setup_window(struct drm_plane *plane)
+{
+	struct cdc_plane *cplane = to_cdc_plane(plane);
+	struct cdc_device *cdc = cplane->cdc;
+	unsigned int layer = cplane->hw_idx;
+	const struct drm_display_mode *mode = &plane->state->crtc->state->adjusted_mode;
+	int32_t x = plane->state->crtc_x;
+	int32_t y = plane->state->crtc_y;
+	int32_t w = plane->state->crtc_w;
+	int32_t h = plane->state->crtc_h;
+
+	/* Do clipping. CDC requires windows that lie inside of the screen. */
+	if(x >= mode->hdisplay)
+		x = mode->hdisplay - 1;
+	if(y >= mode->vdisplay)
+		y = mode->vdisplay - 1;
+	if((x + w) > mode->hdisplay)
+		w -= x+w - mode->hdisplay;
+	if((y + h) > mode->vdisplay)
+		h -= y+h - mode->vdisplay;
+
+	dev_dbg(cdc->dev, "%s for layer %d (plane: 0x%p, cdc: 0x%p, crtc: 0x%p)\n", __func__, layer, plane, cdc, plane->crtc);
+	dev_dbg(cdc->dev, "plane state crtc: %d\n", plane->state->crtc->base.id);
+	dev_dbg(cdc->dev, "setWindow(%d,%d:%dx%d)@%dx%d\n", x, y, w, h, mode->hdisplay, mode->vdisplay);
+
+	cdc->planes[layer].window_width = w;
+	cdc->planes[layer].window_height = h;
+	cdc->planes[layer].window_x = x;
+	cdc->planes[layer].window_y = y;
+
+	cdc_hw_setWindow(cdc, layer, x, y, w, h, plane->state->fb->pitches[0]);
+}
+
 void cdc_plane_setup(struct drm_plane *plane)
 {
   struct cdc_plane *cplane = to_cdc_plane(plane);
   struct cdc_device *cdc = cplane->cdc;
   unsigned int layer = cplane->hw_idx;
-  const struct drm_display_mode *mode = &plane->state->crtc->state->adjusted_mode;
-  int32_t x = plane->state->crtc_x;
-  int32_t y = plane->state->crtc_y;
-  int32_t w = plane->state->crtc_w;
-  int32_t h = plane->state->crtc_h;
-//  uint64_t val;
-//  int ret;
-
-  /* Do clipping. CDC requires windows that lie inside of the screen. */
-  if(x >= mode->hdisplay)
-    x = mode->hdisplay - 1;
-  if(y >= mode->vdisplay)
-      y = mode->vdisplay - 1;
-  if((x + w) > mode->hdisplay)
-    w -= x+w - mode->hdisplay;
-  if((y + h) > mode->vdisplay)
-    h -= y+h - mode->vdisplay;
-
-  dev_dbg(cdc->dev, "%s for layer %d (plane: 0x%p, cdc: 0x%p, crtc: 0x%p)\n", __func__, layer, plane, cdc, plane->crtc);
-  dev_dbg(cdc->dev, "plane state crtc: %d\n", plane->state->crtc->base.id);
-  dev_dbg(cdc->dev, "setWindow(%d,%d:%dx%d)@%dx%d\n", x, y, w, h, mode->hdisplay, mode->vdisplay);
-
-  cdc->planes[layer].window_width = w;
-  cdc->planes[layer].window_height = h;
-  cdc->planes[layer].window_x = x;
-  cdc->planes[layer].window_y = y;
 
   /* plane setup */
   cdc_hw_setPixelFormat(cdc, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
@@ -92,8 +99,6 @@ void cdc_plane_setup(struct drm_plane *plane)
 	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
   }
 
-  cdc_hw_setWindow(cdc, layer, x, y, w, h, plane->state->fb->pitches[0]);
-
 //  ret = drm_object_property_get_value(&plane->base, cdc->alpha, &val);
 //  if(ret == 0)
 //  {
@@ -103,9 +108,6 @@ void cdc_plane_setup(struct drm_plane *plane)
 //  }
 
   cdc_plane_setup_fb(cplane);
-
-  /* TODO really enable here? */
-  cdc_hw_layer_setEnabled(cdc, layer, true);
 }
 
 
@@ -115,13 +117,12 @@ int cdc_plane_disable(struct drm_plane *plane)
   struct cdc_device *cdc = cplane->cdc;
   int layer;
 
-  dev_dbg(cdc->dev, "%s\n", __func__);
+  dev_dbg(cdc->dev, "%s (plane: %d)\n", __func__, cplane->hw_idx);
 
   if(!cplane->enabled) {
     return 0;
   }
 
-  cplane->enabled = false;
   layer = cplane->hw_idx;
   cdc_hw_layer_setEnabled(cdc, layer, false);
 
@@ -134,14 +135,33 @@ static void cdc_plane_atomic_update(struct drm_plane *plane,
 {
   struct cdc_plane *cplane = to_cdc_plane(plane);
   struct cdc_device *cdc = cplane->cdc;
+  struct drm_plane_state *new_state = plane->state;
 
   dev_dbg(cdc->dev, "%s (plane: %d)\n", __func__, cplane->hw_idx);
 
   // Setup the plane if a crtc is bound to it
-  if(plane->state->crtc)
+  if(new_state->crtc)
   {
-    plane->crtc = plane->state->crtc;
+    plane->crtc = new_state->crtc;
+
+    /* todo: find out what to change and only change that, like with the window */
     cdc_plane_setup(plane);
+
+    if(	(old_state->crtc_x != new_state->crtc_x) ||
+    	(old_state->crtc_y != new_state->crtc_y) ||
+    	(old_state->crtc_h != new_state->crtc_h) ||
+    	(old_state->crtc_w != new_state->crtc_w) )
+    {
+    	cdc_plane_setup_window(plane);
+    }
+
+    if(!old_state->crtc)
+    	cdc_hw_layer_setEnabled(cdc, cplane->hw_idx, true);
+  }
+  else
+  {
+	  if(old_state->crtc)
+		  cdc_hw_layer_setEnabled(cdc, cplane->hw_idx, false);
   }
 }
 

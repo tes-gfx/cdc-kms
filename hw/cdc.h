@@ -388,69 +388,6 @@ typedef union cdc_reg_ycbcr_scale_2_tag
 
 #include <cdc_config.h>
 
-/******************************************************************************
- *  global functions                                                          *
- ******************************************************************************/
-cdc_handle cdc_init(cdc_platform_settings a_platform);
-void cdc_exit(cdc_handle a_handle);
-cdc_error_code cdc_getError(void);
-
-cdc_global_config cdc_getGlobalConfig(cdc_handle a_handle);
-cdc_uint8 cdc_getLayerCount(cdc_handle a_handle);
-cdc_global_status cdc_getStatus(cdc_handle a_handle);
-cdc_bool cdc_triggerShadowReload(cdc_handle a_handle, cdc_bool a_in_vblank);
-cdc_bool cdc_updatePending(cdc_handle a_handle);
-
-void cdc_registerISR(cdc_handle a_handle, cdc_irq_type a_type, cdc_isr_callback a_callback, cdc_uint32 a_data);
-void cdc_setScanlineIRQPosition(cdc_handle a_handle, cdc_sint16 a_line);
-
-void cdc_setEnabled(cdc_handle a_handle, cdc_bool a_enable);
-
-void cdc_setModeline(cdc_handle a_handle, char *modeline);
-void cdc_setTiming(cdc_handle a_handle, cdc_uint16 a_h_sync, cdc_uint16 a_h_bPorch, cdc_uint16 a_h_width, cdc_uint16 a_h_fPorch, 
-                                     cdc_uint16 a_v_sync, cdc_uint16 a_v_bPorch, cdc_uint16 a_v_width, cdc_uint16 a_v_fPorch, 
-									 cdc_float a_clk, cdc_bool a_neg_hsync, cdc_bool a_neg_vsync, cdc_bool a_neg_blank, cdc_bool a_inv_clk);
-
-void cdc_setBackgroundColor(cdc_handle a_handle, cdc_uint32 a_color);
-void cdc_uploadBackgroundLayer(cdc_handle a_handle, cdc_uint32 a_start, cdc_uint32 a_length, cdc_uint32 *a_data);
-void cdc_configureBackgroundLayer(cdc_handle a_handle, cdc_bg_mode a_maskMode, cdc_uint16 a_base, cdc_sint16 a_incX, cdc_sint16 a_incY);
-void cdc_setEnableBackgroundLayer(cdc_handle a_handle, cdc_bool a_enable);
-void cdc_setDitherEnabled(cdc_handle a_handle, cdc_bool a_enable);
-void cdc_setSlaveTimingModeEnabled(cdc_handle a_handle, cdc_bool a_enable);
-void cdc_setDualView(cdc_handle a_handle, cdc_bool a_enable, cdc_bool a_subpixel_mixing, cdc_bool a_half_clock_even, cdc_bool a_half_clock_odd, cdc_bool a_half_clock_shift);
-void cdc_setDualPort(cdc_handle a_handle, cdc_dual_port_mode a_mode);
-
-/******************************************************************************
- *  layer functions                                                           *
- ******************************************************************************/
-cdc_layer_config cdc_getLayerConfig(cdc_handle a_handle, cdc_uint8 a_layer);
-void cdc_layer_setEnabled(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_enable);
-void cdc_layer_setDuplication(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_horizontal, cdc_bool a_vertical);
-void cdc_layer_setCLUTEnabled(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_enable);
-void cdc_layer_setColorKeyEnabled(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_enable);
-void cdc_layer_setMirroringEnabled(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_enable);
-void cdc_layer_setAlphaModeEnabled(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_enable);
-
-void cdc_layer_setWindow(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint16 a_startX, cdc_uint16 a_startY, cdc_uint16 a_width, cdc_uint16 a_height, cdc_sint16 a_pitch);
-void cdc_layer_setBufferLines(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint32 a_lines);
-void cdc_layer_moveWindow(cdc_handle a_handle, cdc_uint8 a_layer, cdc_sint16 a_incX, cdc_sint16 a_incY);
-void cdc_layer_setInsertionMode(cdc_handle a_handle, cdc_uint8 a_layer, cdc_insertion_mode a_mode);
-void cdc_layer_setDefaultColor(cdc_handle a_handle, cdc_uint8 a_layer, cdc_bool a_enable, cdc_uint32 a_color);
-void cdc_layer_setConstantAlpha(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint8 a_alpha);
-void cdc_layer_setColorKey(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint32 a_color);
-void cdc_layer_setPixelFormat(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint8 a_format);
-void cdc_layer_setCBAddress(cdc_handle a_handle, cdc_uint8 a_layer, cdc_frame_ptr a_address);
-void cdc_layer_setCBPitch(cdc_handle a_handle, cdc_uint8 a_layer, cdc_sint16 a_pitch);
-void cdc_layer_setAuxFbAddress(cdc_handle a_handle, cdc_uint8 a_layer, cdc_frame_ptr a_address);
-void cdc_layer_setAuxFbPitch(cdc_handle a_handle, cdc_uint8 a_layer, cdc_sint16 a_pitch);
-void cdc_layer_setBlendMode(cdc_handle a_handle, cdc_uint8 a_layer, cdc_blend_factor a_factor1, cdc_blend_factor a_factor2);
-void cdc_layer_uploadCLUT(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint8 a_start, cdc_uint16 a_length, cdc_uint32 *a_data);
-void cdc_layer_setCBSize(cdc_handle a_handle, cdc_uint8 a_layer, cdc_uint16 a_width, cdc_uint16 a_height, cdc_sint16 a_pitch);
-cdc_bool cdc_layer_YCbCrEnabled(cdc_handle a_handle, cdc_uint8 a_layer);
-void cdc_layer_setYCbCrScale1(cdc_handle a_handle, cdc_uint8 a_layer, cdc_reg_ycbcr_scale_1 a_scale1);
-void cdc_layer_setYCbCrScale2(cdc_handle a_handle, cdc_uint8 a_layer, cdc_reg_ycbcr_scale_2 a_scale2);
-void cdc_layer_setAuxFbControl(cdc_handle a_handle, cdc_uint8 a_layer, cdc_reg_aux_fb_control a_aux_fb_contol);
-
 /*--------------------------------------------------------------------------- */
 #ifdef __cplusplus
 }
