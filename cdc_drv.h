@@ -18,6 +18,12 @@
 #include <drm/drm_crtc.h>
 #include <cdc.h>
 
+/* CDC HW limitations */
+#define CDC_MAX_WIDTH  2047u
+#define CDC_MAX_HEIGHT 2047u
+#define CDC_MAX_PITCH  8192u
+#define CDC_OFFSET_LAYER 0x20
+
 struct cdc_device;
 struct cdc_format;
 struct drm_pending_vblank_event;
@@ -31,6 +37,15 @@ struct cdc_plane {
   bool enabled;
   bool used;
 
+  u8 pixel_format;
+  u16 fb_width;
+  u16 fb_height;
+  s32 fb_pitch;
+  u16 window_width;
+  u16 window_height;
+  u16 window_x;
+  u16 window_y;
+  u32 control;
   cdc_uint8 alpha;
 };
 
@@ -42,12 +57,14 @@ struct cdc_device {
 
   void __iomem *mmio;
 
-  cdc_handle drv;
-  cdc_global_config config;
-  int num_layer;
-  unsigned int max_pitch;
-  unsigned int max_width;
-  unsigned int max_height;
+  /* HW context */
+  struct {
+	  int layer_count;
+	  bool enabled;
+	  bool shadow_regs;
+	  u32 irq_enabled;
+	  u32 bus_width; /* bus width in bits */
+  } hw;
 
   struct clk *pclk;
   struct drm_pending_vblank_event *event;

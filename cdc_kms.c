@@ -80,7 +80,7 @@ static struct drm_framebuffer * cdc_fb_create(struct drm_device *dev,
     return ERR_PTR(-EINVAL);
   }
 
-  if(mode_cmd->pitches[0] >= cdc->max_pitch) {
+  if(mode_cmd->pitches[0] >= CDC_MAX_PITCH) {
     dev_err(dev->dev, "requested too large pitch of %u\n", mode_cmd->pitches[0]);
     return ERR_PTR(-EINVAL);
   }
@@ -369,20 +369,6 @@ static int cdc_encoders_init(struct cdc_device *cdc)
 }
 
 
-static void cdc_layer_init(struct cdc_device *cdc) {
-  int i;
-
-  cdc->planes = devm_kzalloc(cdc->dev, sizeof(*cdc->planes) * cdc->num_layer, GFP_KERNEL);
-  for(i = 0; i < cdc->num_layer; ++i) {
-    dev_dbg(cdc->dev, "Initializing layer %d\n", i);
-    cdc_layer_setEnabled(cdc->drv, i, CDC_FALSE);
-    cdc->planes[i].hw_idx = i;
-    cdc->planes[i].cdc = cdc;
-    cdc->planes[i].used = false;
-  }
-}
-
-
 int cdc_modeset_init(struct cdc_device *cdc)
 {
   struct drm_device *dev = cdc->ddev;
@@ -395,11 +381,9 @@ int cdc_modeset_init(struct cdc_device *cdc)
 
   dev->mode_config.min_width = 0;
   dev->mode_config.min_height = 0;
-  dev->mode_config.max_width = cdc->max_width;
-  dev->mode_config.max_height = cdc->max_height;
+  dev->mode_config.max_width = CDC_MAX_WIDTH;
+  dev->mode_config.max_height = CDC_MAX_HEIGHT;
   dev->mode_config.funcs = &cdc_mode_config_funcs;
-
-  cdc_layer_init(cdc);
 
   cdc_planes_init(cdc);
 

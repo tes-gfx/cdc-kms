@@ -24,6 +24,7 @@
 #include "cdc_kms.h"
 #include "cdc_plane.h"
 #include "cdc_hw.h"
+#include "cdc_hw_helpers.h"
 
 
 static struct cdc_device *to_cdc_dev(struct drm_crtc *c)
@@ -63,20 +64,21 @@ static void cdc_crtc_set_display_timing(struct drm_crtc *crtc) {
   dev_dbg(cdc->dev, "\t\tblank polarity:       %s\n", neg_blank ? "neg" : "pos");
   dev_dbg(cdc->dev, "\t\tpixel clock polarity: %s\n", inv_clock ? "neg" : "pos");
 
-  cdc_setTiming(cdc->drv,
-      mode->crtc_hsync_end   - mode->crtc_hsync_start, // hsync
-      mode->crtc_hblank_end  - mode->crtc_hsync_end,   // hback porch
-      mode->crtc_hdisplay,                             // hwidth
-      mode->crtc_hsync_start - mode->crtc_hdisplay,    // hfront porch
-      mode->crtc_vsync_end   - mode->crtc_vsync_start, // vsync
-      mode->crtc_vblank_end  - mode->crtc_vsync_end,   // vback porch
-      mode->crtc_vdisplay,                             // vwidth
-      mode->crtc_vsync_start - mode->crtc_vdisplay,    // vfront porch
-      mode->crtc_clock,
-      neg_hsync,
-      neg_hsync,
-      neg_blank,
-      inv_clock);
+//  cdc_setTiming(cdc->drv,
+//      mode->crtc_hsync_end   - mode->crtc_hsync_start, // hsync
+//      mode->crtc_hblank_end  - mode->crtc_hsync_end,   // hback porch
+//      mode->crtc_hdisplay,                             // hwidth
+//      mode->crtc_hsync_start - mode->crtc_hdisplay,    // hfront porch
+//      mode->crtc_vsync_end   - mode->crtc_vsync_start, // vsync
+//      mode->crtc_vblank_end  - mode->crtc_vsync_end,   // vback porch
+//      mode->crtc_vdisplay,                             // vwidth
+//      mode->crtc_vsync_start - mode->crtc_vdisplay,    // vfront porch
+//      mode->crtc_clock,
+//      neg_hsync,
+//      neg_hsync,
+//      neg_blank,
+//      inv_clock);
+  dev_info(cdc->dev, "[CDC] Set timing\n");
 
   clk_set_rate(cdc->pclk, mode->crtc_clock * 1000);
 }
@@ -169,13 +171,19 @@ void cdc_crtc_start(struct drm_crtc *crtc)
   if(cdc->enabled) {
     return;
   }
-  cdc_setEnabled(cdc->drv, CDC_FALSE);
-  cdc_setBackgroundColor(cdc->drv, 0xff0000ff);
+//  cdc_setEnabled(cdc->drv, CDC_FALSE);
+//  cdc_setBackgroundColor(cdc->drv, 0xff0000ff);
+  cdc_hw_setEnabled(cdc, false);
+  cdc_hw_setBackgroundColor(cdc, 0xff0000ff);
+  dev_info(cdc->dev, "[CDC] Disable CDC and set BG color\n");
+
   cdc_crtc_set_display_timing(crtc);
 
   drm_crtc_vblank_on(crtc);
 
-  cdc_setEnabled(cdc->drv, CDC_TRUE);
+//  cdc_setEnabled(cdc->drv, CDC_TRUE);
+  cdc_hw_setEnabled(cdc, true);
+  dev_info(cdc->dev, "[CDC] Enable CDC\n");
   cdc->enabled = true;
 }
 
@@ -193,7 +201,9 @@ void cdc_crtc_stop(struct drm_crtc *crtc)
   cdc_crtc_wait_page_flip(crtc);
   drm_crtc_vblank_off(crtc);
 
-  cdc_setEnabled(cdc->drv, CDC_FALSE);
+//  cdc_setEnabled(cdc->drv, CDC_FALSE);
+  cdc_hw_setEnabled(cdc, false);
+  dev_info(cdc->dev, "[CDC] Disable CDC\n");
   cdc->enabled = false;
 }
 
@@ -284,13 +294,17 @@ static void cdc_crtc_atomic_flush(struct drm_crtc *crtc)
     /* Schedule shadow reload for next vblank and wait for it.
      * We only have one CRTC, so index is 0.
      */
-    cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
-    drm_wait_one_vblank(crtc->dev, 0);
+//    cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+	cdc_hw_triggerShadowReload(cdc, true);
+    dev_info(cdc->dev, "[CDC] Trigger shadow reload\n");
+//    drm_wait_one_vblank(crtc->dev, 0); // todo: uncomment after work again
   }
   else
   {
     /* Reload immediately, since vblank is disabled */
-    cdc_triggerShadowReload(cdc->drv, CDC_FALSE);
+//    cdc_triggerShadowReload(cdc->drv, CDC_FALSE);
+	cdc_hw_triggerShadowReload(cdc, false);
+    dev_info(cdc->dev, "[CDC] Trigger immediate reload\n");
   }
 }
 
@@ -356,7 +370,7 @@ int cdc_crtc_create(struct cdc_device *cdc)
   init_waitqueue_head(&cdc->flip_wait);
 
   /* todo: really always use first plane here? */
-  ret = drm_crtc_init_with_planes(cdc->ddev, crtc, &cdc->planes[0].plane, &cdc->planes[cdc->num_layer-1].plane, &crtc_funcs);
+  ret = drm_crtc_init_with_planes(cdc->ddev, crtc, &cdc->planes[0].plane, &cdc->planes[cdc->hw.layer_count-1].plane, &crtc_funcs);
   if(ret < 0)
   {
     dev_err(cdc->dev, "Error initializing drm_crtc_init: %d\n", ret);

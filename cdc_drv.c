@@ -34,6 +34,8 @@
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_crtc.h"
+#include "cdc_hw.h"
+#include "cdc_hw_helpers.h"
 
 static const struct platform_device_id cdc_id_table[] = {
   { "cdc", 0 },
@@ -51,14 +53,27 @@ MODULE_DEVICE_TABLE(of, cdc_of_table);
 
 /* configuration dependent */
 static void cdc_init_dev(struct cdc_device *cdc) {
-  cdc->max_width = 2047;
-  cdc->max_height = 2047;
-  cdc->max_pitch = 8192;
-
   /* FIXME HACK for MesseDemo   */
   spin_lock_init(&cdc->irq_slck);
   init_waitqueue_head(&cdc->irq_waitq);
 }
+
+
+static void cdc_layer_init(struct cdc_device *cdc) {
+  int i;
+
+  cdc->planes = devm_kzalloc(cdc->dev, sizeof(*cdc->planes) * cdc->hw.layer_count, GFP_KERNEL);
+  for(i = 0; i < cdc->hw.layer_count; ++i) {
+    dev_dbg(cdc->dev, "Initializing layer %d\n", i);
+//    cdc_layer_setEnabled(cdc->drv, i, CDC_FALSE);
+    cdc_hw_layer_setEnabled(cdc, i, CDC_FALSE);
+    dev_info(cdc->dev, "[CDC] Disable layer\n");
+    cdc->planes[i].hw_idx = i;
+    cdc->planes[i].cdc = cdc;
+    cdc->planes[i].used = false;
+  }
+}
+
 
 static int cdc_unload(struct drm_device *dev) {
   struct cdc_device *cdc = dev->dev_private;
@@ -80,7 +95,8 @@ static int cdc_unload(struct drm_device *dev) {
   dev->irq_enabled = 0;
   dev->dev_private = NULL;
 
-  cdc_exit(cdc->drv);
+//  cdc_exit(cdc->drv);
+  dev_info(dev->dev, "[CDC] Exit\n");
 
   return 0;
 }
@@ -129,11 +145,18 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
   }
 
   cdc_crtc_set_vblank(cdc, false);
-  cdc->drv = cdc_init(cdc);
-  cdc->config = cdc_getGlobalConfig(cdc->drv);
-  cdc->num_layer = cdc_getLayerCount(cdc->drv);
+  cdc->hw.layer_count = 2;
+  cdc->hw.enabled = false;
+  cdc->hw.shadow_regs = true;
+  cdc->hw.irq_enabled = 0;
+  cdc->hw.bus_width = 128; /* todo: get from HW or DT */
 
-  dev_dbg(&pdev->dev, "Found %d layer(s)\n", cdc->num_layer);
+  cdc_layer_init(cdc);
+
+  cdc_hw_resetRegisters(cdc);
+
+  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, cdc->hw.irq_enabled);
+  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0x1f);
 
   ret = drm_vblank_init(dev, 1);
   if(ret < 0)
@@ -198,10 +221,9 @@ static int cdc_regs_show(struct seq_file *m, void *arg)
         struct drm_info_node *node = (struct drm_info_node *) m->private;
         struct drm_device *dev = node->minor->dev;
         struct cdc_device *cdc = dev->dev_private;
-        cdc_context *context;
         unsigned i;
 
-        context = (cdc_context*) cdc->drv;
+//        context = (cdc_context*) cdc->drv;
 
         pm_runtime_get_sync(dev->dev);
 
@@ -209,13 +231,13 @@ static int cdc_regs_show(struct seq_file *m, void *arg)
         // todo: make this dependent on layer count or device memory range
         for(i=0; i<(0x20 + 0x20*2); i += 4)
         {
-          u32 reg = cdc_arch_readReg(context, i);
+          u32 reg = cdc_read_reg(cdc, i);
           seq_printf(m, "%03x: %08x", i * 4, reg);
-          reg = cdc_arch_readReg(context, i+1);
+          reg = cdc_read_reg(cdc, i+1);
           seq_printf(m, " %08x",   reg);
-          reg = cdc_arch_readReg(context, i+2);
+          reg = cdc_read_reg(cdc, i+2);
           seq_printf(m, " %08x",   reg);
-          reg = cdc_arch_readReg(context, i+3);
+          reg = cdc_read_reg(cdc, i+3);
           seq_printf(m, " %08x\n", reg);
         }
 
@@ -331,9 +353,10 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
       struct hack_set_cb *set_cb = (struct hack_set_cb*) stack_data;
 
-      cdc_layer_setCBAddress(cdc->drv, 0, (unsigned int) set_cb->phy_addr);
-      cdc_layer_setCBSize(cdc->drv, 0, set_cb->width, set_cb->height, set_cb->pitch);
-      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+//      cdc_layer_setCBAddress(cdc->drv, 0, (unsigned int) set_cb->phy_addr);
+//      cdc_layer_setCBSize(cdc->drv, 0, set_cb->width, set_cb->height, set_cb->pitch);
+//      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+      dev_info(dev->dev, "[CDC] Set CB address hack\n");
       break;
     }
 
@@ -341,9 +364,10 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
       struct hack_set_winpos *winpos = (struct hack_set_winpos*) stack_data;
 
-      cdc_layer_setWindow(cdc->drv, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
-      cdc_layer_setEnabled(cdc->drv, 0, CDC_TRUE);
-      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+//      cdc_layer_setWindow(cdc->drv, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
+//      cdc_layer_setEnabled(cdc->drv, 0, CDC_TRUE);
+//      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+      dev_info(dev->dev, "[CDC] Set window hack\n");
       break;
     }
 
@@ -351,9 +375,10 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
       struct hack_set_alpha *alpha = (struct hack_set_alpha*) stack_data;
 
-      cdc_layer_setBlendMode(cdc->drv, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
-      cdc_layer_setConstantAlpha(cdc->drv, 0, alpha->alpha);
-      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+//      cdc_layer_setBlendMode(cdc->drv, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
+//      cdc_layer_setConstantAlpha(cdc->drv, 0, alpha->alpha);
+//      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
+      dev_info(dev->dev, "[CDC] Set blend mode hack\n");
       break;
     }
 
@@ -366,6 +391,8 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
       spin_unlock_irqrestore(&cdc->irq_slck, flags);
 
       wait_event_interruptible(cdc->irq_waitq, cdc->irq_stat);
+
+      dev_info(dev->dev, "[CDC] VSYNC hack\n");
 
       break;
     }

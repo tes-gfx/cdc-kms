@@ -8,6 +8,7 @@ cdc-y := cdc_drv.o \
          cdc_hdmienc.o \
          cdc_encoder.o \
          cdc_hw.o \
+         cdc_hw_helpers.o \
          hw/cdc_global.o \
          hw/cdc_layer.o \
          hw/cdc_int.o

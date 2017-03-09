@@ -21,6 +21,7 @@
 #include <cdc_base.h>
 #include "cdc_drv.h"
 #include "cdc_kms.h"
+#include "cdc_hw_helpers.h"
 
 
 static struct cdc_plane *to_cdc_plane(struct drm_plane *p)
@@ -40,7 +41,9 @@ void cdc_plane_setup_fb(struct cdc_plane *plane)
   byte_offset = (plane->plane.state->src_y >> 16) * fb->pitches[0] +
       (plane->plane.state->src_x >> 16) * (fb->bits_per_pixel / 8);
   gem = drm_fb_cma_get_gem_obj(fb, 0);
-  cdc_layer_setCBAddress(cdc->drv, layer, gem->paddr + fb->offsets[0] + byte_offset);
+//  cdc_layer_setCBAddress(cdc->drv, layer, gem->paddr + fb->offset[0] + byte_offset);
+  cdc_hw_setCBAddress(cdc, layer, gem->paddr + fb->offsets[0] + byte_offset);
+  dev_info(cdc->dev, "[CDC] Set CB address\n");
 
   dev_dbg(cdc->dev, "FB set to %x + %x\n", gem->paddr, fb->offsets[0] + byte_offset);
 }
@@ -73,22 +76,35 @@ void cdc_plane_setup(struct drm_plane *plane)
   dev_dbg(cdc->dev, "plane state crtc: %d\n", plane->state->crtc->base.id);
   dev_dbg(cdc->dev, "setWindow(%d,%d:%dx%d)@%dx%d\n", x, y, w, h, mode->hdisplay, mode->vdisplay);
 
+  cdc->planes[layer].window_width = w;
+  cdc->planes[layer].window_height = h;
+  cdc->planes[layer].window_x = x;
+  cdc->planes[layer].window_y = y;
+
   /* plane setup */
-  cdc_layer_setPixelFormat(cdc->drv, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
+//  cdc_layer_setPixelFormat(cdc->drv, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
+  cdc_hw_setPixelFormat(cdc, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
+  dev_info(cdc->dev, "[CDC] set pixel format\n");
 
   if(layer != 0)
   {
     // Enable pixel alpha for overlay layers only
-    cdc_layer_setBlendMode(cdc->drv, layer, CDC_BLEND_PIXEL_ALPHA, CDC_BLEND_PIXEL_ALPHA_INV);
+//    cdc_layer_setBlendMode(cdc->drv, layer, CDC_BLEND_PIXEL_ALPHA, CDC_BLEND_PIXEL_ALPHA_INV);
+	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_PIXEL_ALPHA, CDC_BLEND_PIXEL_ALPHA_INV);
+    dev_info(cdc->dev, "[CDC] enable blending for overlays\n");
   }
   else
   {
     // No blending for primary layer
     // We use CDC_BLEND_CONST_ALPHA since CDC_BLEND_CONST_ONE seems to be broken.
-    cdc_layer_setBlendMode(cdc->drv, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
+//    cdc_layer_setBlendMode(cdc->drv, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
+	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
+    dev_info(cdc->dev, "[CDC] disable blending for primary layer\n");
   }
 
-  cdc_layer_setWindow(cdc->drv, layer, x, y, w, h, plane->state->fb->pitches[0]);
+//  cdc_layer_setWindow(cdc->drv, layer, x, y, w, h, plane->state->fb->pitches[0]);
+  cdc_hw_setWindow(cdc, layer, x, y, w, h, plane->state->fb->pitches[0]);
+  dev_info(cdc->dev, "[CDC] setting up window\n");
 
 //  ret = drm_object_property_get_value(&plane->base, cdc->alpha, &val);
 //  if(ret == 0)
@@ -101,7 +117,9 @@ void cdc_plane_setup(struct drm_plane *plane)
   cdc_plane_setup_fb(cplane);
 
   /* TODO really enable here? */
-  cdc_layer_setEnabled(cdc->drv, layer, CDC_TRUE);
+//  cdc_layer_setEnabled(cdc->drv, layer, CDC_TRUE);
+  cdc_hw_layer_setEnabled(cdc, layer, true);
+  dev_info(cdc->dev, "[CDC] enable layer\n");
 }
 
 
@@ -119,7 +137,8 @@ int cdc_plane_disable(struct drm_plane *plane)
 
   cplane->enabled = false;
   layer = cplane->hw_idx;
-  cdc_layer_setEnabled(cdc->drv, layer, CDC_FALSE);
+//  cdc_layer_setEnabled(cdc->drv, layer, CDC_FALSE);
+  dev_info(cdc->dev, "[CDC] disable layer\n");
 
   return 0;
 }
@@ -199,14 +218,14 @@ int cdc_planes_init(struct cdc_device *cdc)
   if(cdc->alpha == NULL)
     return -ENOMEM;
 
-  for(i = 0; i < cdc->num_layer; ++i)
+  for(i = 0; i < cdc->hw.layer_count; ++i)
   {
     enum drm_plane_type type;
     struct cdc_plane *plane = &cdc->planes[i];
 
     if(i == 0)
       type = DRM_PLANE_TYPE_PRIMARY;
-    else if(i == cdc->num_layer-1)
+    else if(i == cdc->hw.layer_count-1)
       type = DRM_PLANE_TYPE_CURSOR;
     else
       type = DRM_PLANE_TYPE_OVERLAY;
