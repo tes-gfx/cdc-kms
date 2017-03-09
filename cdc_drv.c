@@ -1,7 +1,7 @@
 /*
  * cdc_drv.c  --  CDC Display Controller DRM driver
  *
- * Copyright (C) 2016 TES Electronic Solutions GmbH
+ * Copyright (C) 2017 TES Electronic Solutions GmbH
  * Author: Christian Thaler <christian.thaler@tes-dst.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -503,7 +503,7 @@ static struct drm_driver cdc_driver = {
   .fops  = &cdc_fops,
   .name  = "tes-cdc",
   .desc  = "TES CDC Display Controller",
-  .date  = "20160303",
+  .date  = "20170309",
   .major = 1,
   .minor = 0,
 };

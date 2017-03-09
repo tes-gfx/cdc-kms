@@ -1,7 +1,7 @@
 /*
  * cdc_crtc.h  --  CDC Display Controller CRTC
  *
- * Copyright (C) 2016 TES Electronic Solutions GmbH
+ * Copyright (C) 2017 TES Electronic Solutions GmbH
  * Author: Christian Thaler <christian.thaler@tes-dst.com>
  *
  * This program is free software; you can redistribute it and/or modify
