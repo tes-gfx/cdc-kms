@@ -65,9 +65,7 @@ static void cdc_layer_init(struct cdc_device *cdc) {
   cdc->planes = devm_kzalloc(cdc->dev, sizeof(*cdc->planes) * cdc->hw.layer_count, GFP_KERNEL);
   for(i = 0; i < cdc->hw.layer_count; ++i) {
     dev_dbg(cdc->dev, "Initializing layer %d\n", i);
-//    cdc_layer_setEnabled(cdc->drv, i, CDC_FALSE);
     cdc_hw_layer_setEnabled(cdc, i, CDC_FALSE);
-    dev_info(cdc->dev, "[CDC] Disable layer\n");
     cdc->planes[i].hw_idx = i;
     cdc->planes[i].cdc = cdc;
     cdc->planes[i].used = false;
@@ -95,8 +93,8 @@ static int cdc_unload(struct drm_device *dev) {
   dev->irq_enabled = 0;
   dev->dev_private = NULL;
 
-//  cdc_exit(cdc->drv);
-  dev_info(dev->dev, "[CDC] Exit\n");
+  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
+  cdc_hw_setEnabled(cdc, false);
 
   return 0;
 }
@@ -356,7 +354,9 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 //      cdc_layer_setCBAddress(cdc->drv, 0, (unsigned int) set_cb->phy_addr);
 //      cdc_layer_setCBSize(cdc->drv, 0, set_cb->width, set_cb->height, set_cb->pitch);
 //      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
-      dev_info(dev->dev, "[CDC] Set CB address hack\n");
+      cdc_hw_setCBAddress(cdc, 0, (unsigned int) set_cb->phy_addr);
+      cdc_hw_layer_setCBSize(cdc, 0, set_cb->width, set_cb->height, set_cb->pitch);
+      cdc_hw_triggerShadowReload(cdc, true);
       break;
     }
 
@@ -367,7 +367,9 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 //      cdc_layer_setWindow(cdc->drv, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
 //      cdc_layer_setEnabled(cdc->drv, 0, CDC_TRUE);
 //      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
-      dev_info(dev->dev, "[CDC] Set window hack\n");
+      cdc_hw_setWindow(cdc, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
+      cdc_hw_layer_setEnabled(cdc, 0, true);
+      cdc_hw_triggerShadowReload(cdc, true);
       break;
     }
 
@@ -378,7 +380,9 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 //      cdc_layer_setBlendMode(cdc->drv, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
 //      cdc_layer_setConstantAlpha(cdc->drv, 0, alpha->alpha);
 //      cdc_triggerShadowReload(cdc->drv, CDC_TRUE);
-      dev_info(dev->dev, "[CDC] Set blend mode hack\n");
+      cdc_hw_setBlendMode(cdc, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
+      cdc_hw_layer_setConstantAlpha(cdc, 0, alpha->alpha);
+      cdc_hw_triggerShadowReload(cdc, true);
       break;
     }
 
@@ -389,10 +393,7 @@ long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
       spin_lock_irqsave(&cdc->irq_slck, flags);
       cdc->irq_stat = 0;
       spin_unlock_irqrestore(&cdc->irq_slck, flags);
-
       wait_event_interruptible(cdc->irq_waitq, cdc->irq_stat);
-
-      dev_info(dev->dev, "[CDC] VSYNC hack\n");
 
       break;
     }

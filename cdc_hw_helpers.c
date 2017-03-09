@@ -1,7 +1,7 @@
 /*
- * cdc_hw.c  --  CDC Display Controller Hardware Interface
+ * cdc_hw_helpers.c  --  CDC Display Controller Hardware Interface
  *
- * Copyright (C) 2016 TES Electronic Solutions GmbH
+ * Copyright (C) 2017 TES Electronic Solutions GmbH
  * Author: Christian Thaler <christian.thaler@tes-dst.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,37 @@
 #include <cdc_base.h>
 
 
+static u16 calculateScalingFactor(u16 in, u16 out)
+{
+  u32 factor = ((in-1) << SCALER_FRACTION) / (out-1);
+  return (u16)(factor & 0xFFFF);
+}
+
+
+static void updateScalingFactors(struct cdc_device *cdc, int layer)
+{
+  u16 in_size;
+  u16 out_size;
+  u16 h_scaling_factor;
+  u16 h_scaling_phase;
+  u16 v_scaling_factor;
+
+  in_size = cdc->planes[layer].fb_width;
+  out_size = cdc->planes[layer].window_width;
+  h_scaling_factor = calculateScalingFactor(in_size, out_size);
+  h_scaling_phase = h_scaling_factor + ( 1 << SCALER_FRACTION );
+
+  in_size = cdc->planes[layer].fb_height;
+  out_size = cdc->planes[layer].window_height;
+  v_scaling_factor = calculateScalingFactor(in_size, out_size);
+
+  cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_SCALER_H_SCALING_FACTOR, h_scaling_factor);
+  cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_SCALER_H_SCALING_PHASE,  h_scaling_phase);
+  cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_SCALER_V_SCALING_FACTOR, v_scaling_factor);
+  cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_SCALER_V_SCALING_PHASE,  v_scaling_factor);
+}
+
+
 static void updateBufferLength(struct cdc_device *cdc, int layer)
 {
 	u32 length;
@@ -30,9 +61,6 @@ static void updateBufferLength(struct cdc_device *cdc, int layer)
 	if (pitch == 0) pitch = length;
 	length += cdc->hw.bus_width - 1; // add bus_width_in_bits - 1
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_CB_LENGTH, (((u32)pitch) << 16) | length );
-
-	dev_info(cdc->dev, "[CDC] Updating buffer length: length=%u pitch=%d bpp=%u win_width=%u\n",
-			length, pitch, format_bpp, cdc->planes[layer].window_width);
 }
 
 
@@ -60,18 +88,16 @@ void cdc_hw_setPixelFormat(struct cdc_device *cdc, int layer, u8 format)
 }
 
 
-void cdc_hw_setBlendMode(struct cdc_device *cdc, u8 layer, cdc_blend_factor a_factor1, cdc_blend_factor a_factor2)
+void cdc_hw_setBlendMode(struct cdc_device *cdc, int layer, cdc_blend_factor a_factor1, cdc_blend_factor a_factor2)
 {
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_BLENDING, (a_factor1<<8) | a_factor2);
 }
 
 
-void cdc_hw_setWindow(struct cdc_device *cdc, u8 layer, u16 startX, u16 startY, u16 width, u16 height, s16 pitch)
+void cdc_hw_setWindow(struct cdc_device *cdc, int layer, u16 startX, u16 startY, u16 width, u16 height, s16 pitch)
 {
 	u32 activeStartX;
 	u32 activeStartY;
-
-	dev_info(cdc->dev, "%s x=%u y=%u w=%u h=%u p=%d\n", __func__, startX, startY, width, height, pitch);
 
 	//TODO range checks and truncation
 	//TODO: check windowing ability
@@ -90,14 +116,14 @@ void cdc_hw_setWindow(struct cdc_device *cdc, u8 layer, u16 startX, u16 startY, 
 }
 
 
-void cdc_hw_setCBAddress(struct cdc_device *cdc, u8 layer, dma_addr_t address)
+void cdc_hw_setCBAddress(struct cdc_device *cdc, int layer, dma_addr_t address)
 {
 	//TODO: check address alignment
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_CB_START, address);
 }
 
 
-void cdc_hw_layer_setEnabled(struct cdc_device *cdc, u8 layer, bool enable)
+void cdc_hw_layer_setEnabled(struct cdc_device *cdc, int layer, bool enable)
 {
 	if(enable)
 		cdc->planes[layer].control |= CDC_REG_LAYER_CONTROL_ENABLE;
@@ -195,9 +221,9 @@ bool cdc_hw_triggerShadowReload(struct cdc_device *cdc, bool in_vblank)
 }
 
 
-void cdc_hw_setTiming(struct cdc_device *cdc, cdc_uint16 a_h_sync, cdc_uint16 a_h_bPorch, cdc_uint16 a_h_width, cdc_uint16 a_h_fPorch,
-		cdc_uint16 a_v_sync, cdc_uint16 a_v_bPorch, cdc_uint16 a_v_width, cdc_uint16 a_v_fPorch,
-		cdc_float a_clk, cdc_bool a_neg_hsync, cdc_bool a_neg_vsync, cdc_bool a_neg_blank, cdc_bool a_inv_clk)
+void cdc_hw_setTiming(struct cdc_device *cdc, u16 a_h_sync, u16 a_h_bPorch, u16 a_h_width, u16 a_h_fPorch,
+		u16 a_v_sync, u16 a_v_bPorch, u16 a_v_width, u16 a_v_fPorch,
+		bool a_neg_hsync, bool a_neg_vsync, bool a_neg_blank, bool a_inv_clk)
 {
 	u32 sync_size;
 	u32 back_porch;
@@ -236,7 +262,8 @@ void cdc_hw_setTiming(struct cdc_device *cdc, cdc_uint16 a_h_sync, cdc_uint16 a_
 
 	// set pll
 	//TODO: check for errors
-	cdc_arch_setPixelClk(a_clk);
+	//todo: set pixel clock here?
+	//cdc_arch_setPixelClk(a_clk);
 
 
 	// set timing registers
@@ -288,4 +315,22 @@ void cdc_hw_setEnabled(struct cdc_device *cdc, bool enable)
 void cdc_hw_setBackgroundColor(struct cdc_device *cdc, u32 color)
 {
 	cdc_write_reg(cdc, CDC_REG_GLOBAL_BG_COLOR, color);
+}
+
+
+void cdc_hw_layer_setCBSize(struct cdc_device *cdc, int layer, u16 width, u16 height, s16 pitch)
+{
+	cdc->planes[layer].fb_width = width;
+	cdc->planes[layer].fb_height = height;
+	cdc->planes[layer].fb_pitch = pitch;
+	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_FB_LINES, height);
+	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_SCALER_INPUT_SIZE, (height << 16) | width);
+	updateScalingFactors(cdc, layer);
+	updateBufferLength(cdc, layer);
+}
+
+
+void cdc_hw_layer_setConstantAlpha(struct cdc_device *cdc, int layer, u8 alpha)
+{
+	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_ALPHA, alpha);
 }

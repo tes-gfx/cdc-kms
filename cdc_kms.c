@@ -66,7 +66,6 @@ const struct cdc_format *cdc_format_info(__u32 drm_fourcc)
 static struct drm_framebuffer * cdc_fb_create(struct drm_device *dev,
     struct drm_file *file_priv, struct drm_mode_fb_cmd2 *mode_cmd)
 {
-  struct cdc_device *cdc = dev->dev_private;
   struct drm_framebuffer *fb;
   struct drm_gem_cma_object *gem;
   const struct cdc_format *format;

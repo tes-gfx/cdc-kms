@@ -8,10 +8,7 @@ cdc-y := cdc_drv.o \
          cdc_hdmienc.o \
          cdc_encoder.o \
          cdc_hw.o \
-         cdc_hw_helpers.o \
-         hw/cdc_global.o \
-         hw/cdc_layer.o \
-         hw/cdc_int.o
+         cdc_hw_helpers.o 
 ccflags-y := -DDISABLE_ASSERTIONS -I$(src)/hw/
 
 SRC := $(shell pwd)
@@ -26,7 +23,6 @@ clean:
 	-rm -f *.o *~ core .depend .*.cmd *.ko *.mod.c
 	-rm -f Module.markers Module.symvers modules.order
 	-rm -rf .tmp_versions Modules.symvers
-	-rm ./hw/*.o
 
 .PHONY:
 deploy: all

@@ -41,11 +41,7 @@ void cdc_plane_setup_fb(struct cdc_plane *plane)
   byte_offset = (plane->plane.state->src_y >> 16) * fb->pitches[0] +
       (plane->plane.state->src_x >> 16) * (fb->bits_per_pixel / 8);
   gem = drm_fb_cma_get_gem_obj(fb, 0);
-//  cdc_layer_setCBAddress(cdc->drv, layer, gem->paddr + fb->offset[0] + byte_offset);
   cdc_hw_setCBAddress(cdc, layer, gem->paddr + fb->offsets[0] + byte_offset);
-  dev_info(cdc->dev, "[CDC] Set CB address\n");
-
-  dev_dbg(cdc->dev, "FB set to %x + %x\n", gem->paddr, fb->offsets[0] + byte_offset);
 }
 
 
@@ -82,29 +78,21 @@ void cdc_plane_setup(struct drm_plane *plane)
   cdc->planes[layer].window_y = y;
 
   /* plane setup */
-//  cdc_layer_setPixelFormat(cdc->drv, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
   cdc_hw_setPixelFormat(cdc, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
-  dev_info(cdc->dev, "[CDC] set pixel format\n");
 
   if(layer != 0)
   {
     // Enable pixel alpha for overlay layers only
-//    cdc_layer_setBlendMode(cdc->drv, layer, CDC_BLEND_PIXEL_ALPHA, CDC_BLEND_PIXEL_ALPHA_INV);
 	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_PIXEL_ALPHA, CDC_BLEND_PIXEL_ALPHA_INV);
-    dev_info(cdc->dev, "[CDC] enable blending for overlays\n");
   }
   else
   {
     // No blending for primary layer
     // We use CDC_BLEND_CONST_ALPHA since CDC_BLEND_CONST_ONE seems to be broken.
-//    cdc_layer_setBlendMode(cdc->drv, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
 	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
-    dev_info(cdc->dev, "[CDC] disable blending for primary layer\n");
   }
 
-//  cdc_layer_setWindow(cdc->drv, layer, x, y, w, h, plane->state->fb->pitches[0]);
   cdc_hw_setWindow(cdc, layer, x, y, w, h, plane->state->fb->pitches[0]);
-  dev_info(cdc->dev, "[CDC] setting up window\n");
 
 //  ret = drm_object_property_get_value(&plane->base, cdc->alpha, &val);
 //  if(ret == 0)
@@ -117,9 +105,7 @@ void cdc_plane_setup(struct drm_plane *plane)
   cdc_plane_setup_fb(cplane);
 
   /* TODO really enable here? */
-//  cdc_layer_setEnabled(cdc->drv, layer, CDC_TRUE);
   cdc_hw_layer_setEnabled(cdc, layer, true);
-  dev_info(cdc->dev, "[CDC] enable layer\n");
 }
 
 
@@ -137,8 +123,7 @@ int cdc_plane_disable(struct drm_plane *plane)
 
   cplane->enabled = false;
   layer = cplane->hw_idx;
-//  cdc_layer_setEnabled(cdc->drv, layer, CDC_FALSE);
-  dev_info(cdc->dev, "[CDC] disable layer\n");
+  cdc_hw_layer_setEnabled(cdc, layer, false);
 
   return 0;
 }
