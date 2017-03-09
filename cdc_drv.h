@@ -63,7 +63,7 @@ struct cdc_device {
 	  bool enabled;
 	  bool shadow_regs;
 	  u32 irq_enabled;
-	  u32 bus_width; /* bus width in bits */
+	  u32 bus_width; /* bus width in bytes */
   } hw;
 
   struct clk *pclk;

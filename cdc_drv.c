@@ -149,7 +149,7 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
   cdc->hw.enabled = false;
   cdc->hw.shadow_regs = true;
   cdc->hw.irq_enabled = 0;
-  cdc->hw.bus_width = 128; /* todo: get from HW or DT */
+  cdc->hw.bus_width = 16; /* todo: get from HW or DT */
 
   cdc_layer_init(cdc);
 
