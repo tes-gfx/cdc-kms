@@ -234,7 +234,7 @@ static int cdc_encoders_find_and_init(struct cdc_device *cdc,
       __u32 type;
   } encoders[] = {
       { "adi,adv7513", DRM_MODE_ENCODER_TMDS },
-      { "terasic,lvdsenc", DRM_MODE_ENCODER_LVDS },
+      { "lvds-encoder", DRM_MODE_ENCODER_LVDS },
   };
 
   __u32 enc_type = DRM_MODE_ENCODER_NONE;
@@ -319,13 +319,14 @@ static int cdc_encoders_find_and_init(struct cdc_device *cdc,
   }
 
   ret = cdc_encoder_init(cdc, enc_type, encoder, connector);
-  of_node_put(encoder);
-  of_node_put(connector);
 
   if(ret && ret != -EPROBE_DEFER)
       dev_warn(cdc->dev,
            "failed to initialize encoder %s (%d), skipping\n",
            encoder->full_name, ret);
+
+  of_node_put(encoder);
+  of_node_put(connector);
 
   return ret;
 }

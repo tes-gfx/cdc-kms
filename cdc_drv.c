@@ -116,7 +116,7 @@ static irqreturn_t cdc_irq(int irq, void *arg)
   }
   if(status & CDC_IRQ_FIFO_UNDERRUN)
   {
-    // disable underrun IRQ to prevent message flooding
+    // disable underrun IRQ to prevent IRQ flooding
     cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
 
     dev_err_ratelimited(cdc->dev, "FIFO underrun\n");

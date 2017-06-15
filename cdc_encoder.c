@@ -105,7 +105,8 @@ int cdc_encoder_init(struct cdc_device *cdc, u32 enc_type, struct device_node * 
   switch(enc_type)
   {
   case DRM_MODE_ENCODER_LVDS:
-    ret = cdc_lvds_connector_init(cdc, enc, con_node);
+    dev_dbg(cdc->dev, "Initializing LVDS connector...\n");
+    ret = cdc_lvds_connector_init(cdc, enc, enc_node);
     break;
   case DRM_MODE_ENCODER_TMDS:
       dev_dbg(cdc->dev, "Initializing HDMI connector...\n");
