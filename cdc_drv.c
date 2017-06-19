@@ -271,6 +271,20 @@ static void cdc_disable_vblank(struct drm_device *dev, int crtc)
 }
 
 
+/* TODO: remove when cdc is fixed
+ * Enforcing 256 byte pitch
+ * */
+static int cdc_gem_cma_dumb_create(struct drm_file *file_priv,
+			    struct drm_device *drm,
+			    struct drm_mode_create_dumb *args)
+{
+	args->pitch = (args->pitch + 255) & ~255;
+	args->size = args->pitch * args->height;
+
+	return drm_gem_cma_dumb_create_internal(file_priv, drm, args);
+}
+
+
 #ifdef CONFIG_DEBUG_FS
 static int cdc_regs_show(struct seq_file *m, void *arg)
 {
@@ -493,7 +507,7 @@ static struct drm_driver cdc_driver = {
   .gem_prime_vunmap          = drm_gem_cma_prime_vunmap,
   .gem_prime_mmap            = drm_gem_cma_prime_mmap,
   .gem_vm_ops                = &drm_gem_cma_vm_ops,
-  .dumb_create               = drm_gem_cma_dumb_create,
+  .dumb_create               = cdc_gem_cma_dumb_create,
   .dumb_map_offset           = drm_gem_cma_dumb_map_offset,
   .dumb_destroy              = drm_gem_dumb_destroy,
 #ifdef CONFIG_DEBUG_FS
