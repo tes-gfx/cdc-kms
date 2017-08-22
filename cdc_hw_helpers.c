@@ -166,7 +166,6 @@ void cdc_hw_resetRegisters(struct cdc_device *cdc)
   // initialize per layer registers
   for(i=0; i<cdc->hw.layer_count;i++)
   {
-	  dev_info(cdc->dev, "RESET LAYER CONTROL\n");
     cdc_write_layer_reg(cdc, i,  CDC_REG_LAYER_CONTROL,      0);
     cdc->planes[i].control = 0;
 

@@ -103,6 +103,54 @@
 #define CDC_REG_LAYER_CONTROL_ENABLE                  0x00000001u
 
 
+typedef union {
+	u32 m_data;
+	struct {
+		u32 m_revision : 8;
+		u32 m_minor    : 8;
+		u32 m_major    : 8;
+	} bits;
+} cdc_hw_revision_t;
+
+typedef union {
+	u32 m_data;
+	struct {
+		u32 m_out_width_blue   : 4;
+		u32 m_out_width_green  : 4;
+		u32 m_out_width_red    : 4;
+		u32 m_precise_blending : 1; // precise blending enabled
+		u32 m_pad0             : 1;
+		u32 m_dithering        : 2; // dithering technique
+		u32 m_pad1             : 1;
+		u32 m_gamma            : 3; // gamma correction technique
+		u32 m_pad2             : 1;
+		u32 m_shadow_regs      : 1; // shadow registers enabled
+		u32 m_bg_color         : 1; // background color programmable
+		u32 m_bg_blending      : 1; // background blending enabled
+		u32 m_line_irq_pos     : 1; // line IRQ position programmable
+		u32 m_timing           : 1; // timing programmable
+		u32 m_irq_pol          : 1; // IRQ polarity programmable
+		u32 m_sync_pol         : 1; // sync polarity programmable
+		u32 m_dither_width     : 1; // dither width programmable
+		u32 m_status_regs      : 1; // status registers enabled
+		u32 m_config_reading   : 1; // config reading mode enabled
+		u32 m_blind_mode       : 1; // blind mode enabled
+	} bits;
+} cdc_config1_t;
+
+typedef union {
+	u32 m_data;
+	struct {
+		u32 m_bg_layer  : 1; // background layer ability enabled
+		u32 m_sync      : 1; // synchronization ability enabled
+		u32 m_dual_view : 1; // dual view ability enabled
+		u32 m_out2      : 1; // secondary RGB output port enabled
+		u32 m_bus_width : 3; // bus width (log2 of number of bytes)
+		u32 m_ext_ctrl  : 1; // external display control ability enabled
+	} bits;
+} cdc_config2_t;
+
+
 /*--------------------------------------------------------------------------
  * Enum: cdc_irq_type
  *  IRQ type (see <cdc_registerISR>)

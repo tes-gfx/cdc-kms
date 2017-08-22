@@ -202,11 +202,29 @@ static int cdc_load(struct drm_device *dev, unsigned long flags)
   }
 
   cdc_crtc_set_vblank(cdc, false);
-  cdc->hw.layer_count = 2;
   cdc->hw.enabled = false;
-  cdc->hw.shadow_regs = true;
   cdc->hw.irq_enabled = 0;
-  cdc->hw.bus_width = 16; /* todo: get from HW or DT */
+
+  /* get the hw configuration */
+  {
+	cdc_hw_revision_t hwrev;
+	cdc_config1_t conf1;
+	cdc_config2_t conf2;
+	u32 layer_count;
+
+	hwrev.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_HW_REVISION);
+	layer_count = cdc_read_reg(cdc, CDC_REG_GLOBAL_LAYER_COUNT);
+	conf1.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG1);
+	conf2.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG2);
+
+	cdc->hw.layer_count = layer_count;
+	cdc->hw.shadow_regs = conf1.bits.m_shadow_regs;
+	cdc->hw.bus_width = 1 << conf2.bits.m_bus_width;
+
+	dev_info(dev->dev, "CDC HW ver. %u.%u (rev. %u):\n", hwrev.bits.m_major, hwrev.bits.m_minor, hwrev.bits.m_revision);
+	dev_info(dev->dev, "\tlayer count: %u\n", cdc->hw.layer_count);
+	dev_info(dev->dev, "\tbus width: %u byte\n", cdc->hw.bus_width);
+  }
 
   cdc_layer_init(cdc);
 
@@ -293,15 +311,18 @@ static int cdc_regs_show(struct seq_file *m, void *arg)
         struct cdc_device *cdc = dev->dev_private;
         unsigned i;
 
-//        context = (cdc_context*) cdc->drv;
-
         pm_runtime_get_sync(dev->dev);
 
         /* Show the first few registers */
-        // todo: make this dependent on layer count or device memory range
-        for(i=0; i<(0x20 + 0x20*2); i += 4)
+        for(i=0; i<(0x20 + 0x20*cdc->hw.layer_count); i += 4)
         {
           u32 reg = cdc_read_reg(cdc, i);
+
+          if(i == 0)
+        	  seq_printf(m, "Global:\n");
+          else if(i % 0x20 == 0)
+        	  seq_printf(m, "Layer %d:\n", i / 0x20);
+
           seq_printf(m, "%03x: %08x", i * 4, reg);
           reg = cdc_read_reg(cdc, i+1);
           seq_printf(m, " %08x",   reg);
