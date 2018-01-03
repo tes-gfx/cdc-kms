@@ -86,15 +86,15 @@ void cdc_plane_setup(struct drm_plane *plane)
   /* plane setup */
   cdc_hw_setPixelFormat(cdc, layer, cdc_format_info(plane->state->fb->pixel_format)->cdc_hw_format);
 
-  if(layer != 0)
+  // note: in the CDC default config, only CONS_ALPHA(_INV) and ALPHA_X_CONST_ALPHA(_INV) are available
+  if((layer != 0) && (plane->state->fb->pixel_format != DRM_FORMAT_XRGB8888))
   {
     // Enable pixel alpha for overlay layers only
-	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_PIXEL_ALPHA, CDC_BLEND_PIXEL_ALPHA_INV);
+	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
   }
   else
   {
-    // No blending for primary layer
-    // We use CDC_BLEND_CONST_ALPHA since CDC_BLEND_CONST_ONE seems to be broken.
+    // No blending for primary layer and layers with XRGB8888 format (ignore the alpha value)
 	cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
   }
 
