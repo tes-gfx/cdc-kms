@@ -13,10 +13,18 @@
 #ifndef CDC_PLANE_H_
 #define CDC_PLANE_H_
 
+struct cdc_plane_state {
+	struct drm_plane_state state;
+
+	unsigned int alpha;
+};
+
+static inline struct cdc_plane_state *
+to_cdc_plane_state(struct drm_plane_state *state)
+{
+	return container_of(state, struct cdc_plane_state, state);
+}
+
 int cdc_planes_init(struct cdc_device *cdc);
-void cdc_plane_compute_base(struct cdc_plane *plane, struct drm_framebuffer *fb);
-int cdc_plane_disable(struct drm_plane *plane);
-void cdc_plane_setup(struct cdc_plane *plane);
-void cdc_plane_update_base(struct cdc_plane *plane);
 
 #endif /* CDC_PLANE_H_ */
