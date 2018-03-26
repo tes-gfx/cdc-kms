@@ -201,7 +201,7 @@ static int cdc_atomic_commit(struct drm_device *dev,
   /* Wait until all affected CRTCs have completed previous commits and
    * mark them as pending.
    */
-  if(state->crtcs[0])
+  if(state->crtcs[0].ptr)
     commit->crtcs = 1;
 
   spin_lock(&cdc->commit.wait.lock);
