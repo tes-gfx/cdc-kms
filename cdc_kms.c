@@ -140,13 +140,22 @@ static void cdc_atomic_complete(struct cdc_commit *commit)
   /* Apply the atomic update. */
   drm_atomic_helper_commit_modeset_disables(dev, old_state);
   drm_atomic_helper_commit_modeset_enables(dev, old_state);
-  drm_atomic_helper_commit_planes(dev, old_state);
+  /* todo: maybe set DRM_PLANE_COMMIT_ACTIVE_ONLY flag here
+   * This will stop the KMS core from sending plane update notifications
+   * for a disabled CRTC. Check if we manually ignore plane updates in
+   * this case.
+   */
+  drm_atomic_helper_commit_planes(dev, old_state, 0);
 
   drm_atomic_helper_wait_for_vblanks(dev, old_state);
 
   drm_atomic_helper_cleanup_planes(dev, old_state);
 
-  drm_atomic_state_free(old_state);
+  /* todo: check if we can make use of the reference counting anywhere
+   * Maybe use worker threads for the commit? See:
+   * https://lists.freedesktop.org/archives/intel-gfx-trybot/2016-September/008592.html
+   */
+  drm_atomic_state_put(old_state);
 
   /* Complete the commit, wake up any waiter. */
   spin_lock(&cdc->commit.wait.lock);
