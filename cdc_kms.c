@@ -63,7 +63,7 @@ const struct cdc_format *cdc_format_info(__u32 drm_fourcc)
 
 
 static struct drm_framebuffer * cdc_fb_create(struct drm_device *dev,
-    struct drm_file *file_priv, struct drm_mode_fb_cmd2 *mode_cmd)
+    struct drm_file *file_priv, const struct drm_mode_fb_cmd2 *mode_cmd)
 {
   struct drm_framebuffer *fb;
   struct drm_gem_cma_object *gem;
@@ -217,7 +217,7 @@ static int cdc_atomic_commit(struct drm_device *dev,
   }
 
   /* Swap the state, this is the point of no return. */
-  drm_atomic_helper_swap_state(dev, state);
+  drm_atomic_helper_swap_state(state, true);
 
   if(async)
     schedule_work(&commit->work);
