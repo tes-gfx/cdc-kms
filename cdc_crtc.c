@@ -95,7 +95,7 @@ void cdc_crtc_cancel_page_flip(struct drm_crtc *crtc, struct drm_file *file)
   event = cdc->event;
   if(event && event->base.file_priv == file) {
     cdc->event = NULL;
-    event->base.destroy(&event->base);
+    drm_event_cancel_free(dev, &event->base);
     drm_crtc_vblank_put(crtc);
   }
   spin_unlock_irqrestore(&dev->event_lock, flags);
@@ -120,7 +120,7 @@ static void cdc_crtc_finish_page_flip(struct drm_crtc *crtc)
   }
 
   spin_lock_irqsave(&dev->event_lock, flags);
-  drm_send_vblank_event(dev, 0, event);
+  drm_crtc_send_vblank_event(0, event);
   wake_up(&cdc->flip_wait);
   spin_unlock_irqrestore(&dev->event_lock, flags);
 
@@ -248,7 +248,8 @@ static bool cdc_crtc_mode_fixup(struct drm_crtc *crtc,
   return true;
 }
 
-static void cdc_crtc_atomic_begin(struct drm_crtc *crtc)
+static void cdc_crtc_atomic_begin(struct drm_crtc *crtc,
+									 struct drm_crtc_state *old_crtc_state)
 {
   struct drm_pending_vblank_event *event = crtc->state->event;
   struct cdc_device *cdc = to_cdc_dev(crtc);
@@ -266,7 +267,8 @@ static void cdc_crtc_atomic_begin(struct drm_crtc *crtc)
   }
 }
 
-static void cdc_crtc_atomic_flush(struct drm_crtc *crtc)
+static void cdc_crtc_atomic_flush(struct drm_crtc *crtc,
+									 struct drm_crtc_state *old_crtc_state)
 {
   struct cdc_device *cdc = to_cdc_dev(crtc);
 
@@ -351,7 +353,9 @@ int cdc_crtc_create(struct cdc_device *cdc)
   init_waitqueue_head(&cdc->flip_wait);
 
   /* todo: really always use first plane here? */
-  ret = drm_crtc_init_with_planes(cdc->ddev, crtc, &cdc->planes[0].plane, &cdc->planes[cdc->hw.layer_count-1].plane, &crtc_funcs);
+  ret = drm_crtc_init_with_planes(cdc->ddev, crtc, &cdc->planes[0].plane,
+                                  &cdc->planes[cdc->hw.layer_count-1].plane,
+								  &crtc_funcs, NULL);
   if(ret < 0)
   {
     dev_err(cdc->dev, "Error initializing drm_crtc_init: %d\n", ret);
