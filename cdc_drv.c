@@ -513,7 +513,6 @@ static struct drm_driver cdc_driver = {
   .unload                    = cdc_unload,
   .preclose                  = cdc_preclose,
   .lastclose                 = cdc_lastclose,
-  .set_busid                 = drm_platform_set_busid,
   .get_vblank_counter        = drm_vblank_count,
   .enable_vblank             = cdc_enable_vblank,
   .disable_vblank            = cdc_disable_vblank,
