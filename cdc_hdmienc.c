@@ -155,7 +155,7 @@ int cdc_hdmienc_init(struct cdc_device *cdc,
     goto error;
 
   ret = drm_encoder_init(cdc->ddev, encoder, &encoder_funcs,
-                         DRM_MODE_ENCODER_TMDS);
+                         DRM_MODE_ENCODER_TMDS, NULL);
   if(ret < 0)
     goto error;
 

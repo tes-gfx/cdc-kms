@@ -291,7 +291,8 @@ int cdc_planes_init(struct cdc_device *cdc)
 			&cdc_plane_funcs,
 			cdc_supported_formats,
 			ARRAY_SIZE(cdc_supported_formats),
-			type);
+			type,
+			NULL);
 		if(ret < 0) {
 			dev_err(cdc->dev, "could not initialize plane %d...\n", i);
 			return ret;

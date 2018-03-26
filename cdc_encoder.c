@@ -92,7 +92,8 @@ int cdc_encoder_init(struct cdc_device *cdc, u32 enc_type, struct device_node * 
   }
   else
   {
-    ret = drm_encoder_init(cdc->ddev, encoder, &encoder_funcs, enc_type);
+    ret = drm_encoder_init(cdc->ddev, encoder, &encoder_funcs,
+                           enc_type, NULL);
     if(ret < 0)
     {
       dev_err(cdc->dev, "Error initializing LVDS drm_encoder: %d\n", ret);
