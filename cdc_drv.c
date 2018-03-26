@@ -274,7 +274,7 @@ static void cdc_lastclose(struct drm_device *dev)
 }
 
 
-static int cdc_enable_vblank(struct drm_device *dev, int crtc)
+static int cdc_enable_vblank(struct drm_device *dev, unsigned int pipe)
 {
   struct cdc_device *cdc = dev->dev_private;
   cdc_crtc_set_vblank(cdc, true);
@@ -282,7 +282,7 @@ static int cdc_enable_vblank(struct drm_device *dev, int crtc)
   return 0;
 }
 
-static void cdc_disable_vblank(struct drm_device *dev, int crtc)
+static void cdc_disable_vblank(struct drm_device *dev, unsigned int pipe)
 {
   struct cdc_device *cdc = dev->dev_private;
   cdc_crtc_set_vblank(cdc, false);
