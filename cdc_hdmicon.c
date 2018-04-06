@@ -25,7 +25,7 @@ static int cdc_hdmi_connector_get_modes (struct drm_connector *connector)
 {
 	struct cdc_connector *con = to_cdc_connector(connector);
 	struct drm_encoder *encoder = cdc_encoder_to_drm_encoder(con->encoder);
-	struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 
 	dev_dbg(con->cdc->dev, "%s\n", __func__);
 
@@ -40,7 +40,7 @@ static int cdc_hdmi_connector_mode_valid (struct drm_connector *connector,
 {
 	struct cdc_connector *con = to_cdc_connector(connector);
 	struct drm_encoder *encoder = cdc_encoder_to_drm_encoder(con->encoder);
-	struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 	long rate;
 	long mode_rate;
 
@@ -88,7 +88,7 @@ static enum drm_connector_status cdc_hdmi_connector_detect (
 {
 	struct cdc_connector *con = to_cdc_connector(connector);
 	struct drm_encoder *encoder = cdc_encoder_to_drm_encoder(con->encoder);
-	struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 
 	dev_dbg(con->cdc->dev, "%s\n", __func__);
 

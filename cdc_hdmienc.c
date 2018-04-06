@@ -29,10 +29,8 @@ struct cdc_hdmienc {
 static void cdc_hdmienc_disable (struct drm_encoder *encoder)
 {
 	struct cdc_device *cdc = encoder->dev->dev_private;
-	struct cdc_hdmienc
-	*hdmienc = to_cdc_hdmienc(encoder);
-	struct drm_encoder_slave_funcs
-	*sfuncs = to_slave_funcs(encoder);
+	struct cdc_hdmienc *hdmienc = to_cdc_hdmienc(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 
 	dev_dbg(cdc->dev, "%s\n", __func__);
 
@@ -45,10 +43,8 @@ static void cdc_hdmienc_disable (struct drm_encoder *encoder)
 static void cdc_hdmienc_enable (struct drm_encoder *encoder)
 {
 	struct cdc_device *cdc = encoder->dev->dev_private;
-	struct cdc_hdmienc
-	*hdmienc = to_cdc_hdmienc(encoder);
-	struct drm_encoder_slave_funcs
-	*sfuncs = to_slave_funcs(encoder);
+	struct cdc_hdmienc *hdmienc = to_cdc_hdmienc(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 
 	dev_dbg(cdc->dev, "%s\n", __func__);
 
@@ -63,8 +59,7 @@ static int cdc_hdmienc_atomic_check (struct drm_encoder *encoder,
 	struct drm_connector_state *conn_state)
 {
 	struct cdc_device *cdc = encoder->dev->dev_private;
-	struct drm_encoder_slave_funcs
-	*sfuncs = to_slave_funcs(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 	struct drm_display_mode *adjusted_mode = &crtc_state->adjusted_mode;
 	const struct drm_display_mode *mode = &crtc_state->mode;
 
@@ -80,8 +75,7 @@ static void cdc_hdmienc_mode_set (struct drm_encoder *encoder,
 	struct drm_display_mode *mode, struct drm_display_mode *adjusted_mode)
 {
 	struct cdc_device *cdc = encoder->dev->dev_private;
-	struct drm_encoder_slave_funcs
-	*sfuncs = to_slave_funcs(encoder);
+	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
 
 	dev_dbg(cdc->dev, "%s\n", __func__);
 
@@ -98,8 +92,7 @@ static const struct drm_encoder_helper_funcs encoder_helper_funcs = {
 
 static void cdc_hdmienc_cleanup (struct drm_encoder *encoder)
 {
-	struct cdc_hdmienc
-	*hdmienc = to_cdc_hdmienc(encoder);
+	struct cdc_hdmienc *hdmienc = to_cdc_hdmienc(encoder);
 
 	if (hdmienc->enabled)
 		cdc_hdmienc_disable(encoder);
