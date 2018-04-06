@@ -13,7 +13,6 @@
 #ifndef __CDC_HDMICON_H__
 #define __CDC_HDMICON_H__
 
-int cdc_hdmi_connector_init(struct cdc_device *cdc,
-                            struct cdc_encoder *enc);
+int cdc_hdmi_connector_init (struct cdc_device *cdc, struct cdc_encoder *enc);
 
 #endif //__CDC_HDMICON_H__

@@ -13,10 +13,6 @@
 #ifndef _CDC_REGS_H_
 #define _CDC_REGS_H_
 
-#ifndef NULL
-  #define NULL ((void *) 0)
-#endif
-
 // global registers
 #define CDC_REG_GLOBAL_HW_REVISION          0x00
 #define CDC_REG_GLOBAL_LAYER_COUNT          0x01
@@ -102,54 +98,52 @@
 #define CDC_REG_LAYER_CONTROL_COLOR_KEY_ENABLE        0x00000002u
 #define CDC_REG_LAYER_CONTROL_ENABLE                  0x00000001u
 
-
 typedef union {
 	u32 m_data;
 	struct {
-		u32 m_revision : 8;
-		u32 m_minor    : 8;
-		u32 m_major    : 8;
+		u32 m_revision :8;
+		u32 m_minor :8;
+		u32 m_major :8;
 	} bits;
 } cdc_hw_revision_t;
 
 typedef union {
 	u32 m_data;
 	struct {
-		u32 m_out_width_blue   : 4;
-		u32 m_out_width_green  : 4;
-		u32 m_out_width_red    : 4;
-		u32 m_precise_blending : 1; // precise blending enabled
-		u32 m_pad0             : 1;
-		u32 m_dithering        : 2; // dithering technique
-		u32 m_pad1             : 1;
-		u32 m_gamma            : 3; // gamma correction technique
-		u32 m_pad2             : 1;
-		u32 m_shadow_regs      : 1; // shadow registers enabled
-		u32 m_bg_color         : 1; // background color programmable
-		u32 m_bg_blending      : 1; // background blending enabled
-		u32 m_line_irq_pos     : 1; // line IRQ position programmable
-		u32 m_timing           : 1; // timing programmable
-		u32 m_irq_pol          : 1; // IRQ polarity programmable
-		u32 m_sync_pol         : 1; // sync polarity programmable
-		u32 m_dither_width     : 1; // dither width programmable
-		u32 m_status_regs      : 1; // status registers enabled
-		u32 m_config_reading   : 1; // config reading mode enabled
-		u32 m_blind_mode       : 1; // blind mode enabled
+		u32 m_out_width_blue :4;
+		u32 m_out_width_green :4;
+		u32 m_out_width_red :4;
+		u32 m_precise_blending :1; // precise blending enabled
+		u32 m_pad0 :1;
+		u32 m_dithering :2; // dithering technique
+		u32 m_pad1 :1;
+		u32 m_gamma :3; // gamma correction technique
+		u32 m_pad2 :1;
+		u32 m_shadow_regs :1; // shadow registers enabled
+		u32 m_bg_color :1; // background color programmable
+		u32 m_bg_blending :1; // background blending enabled
+		u32 m_line_irq_pos :1; // line IRQ position programmable
+		u32 m_timing :1; // timing programmable
+		u32 m_irq_pol :1; // IRQ polarity programmable
+		u32 m_sync_pol :1; // sync polarity programmable
+		u32 m_dither_width :1; // dither width programmable
+		u32 m_status_regs :1; // status registers enabled
+		u32 m_config_reading :1; // config reading mode enabled
+		u32 m_blind_mode :1; // blind mode enabled
 	} bits;
 } cdc_config1_t;
 
 typedef union {
 	u32 m_data;
 	struct {
-		u32 m_bg_layer  : 1; // background layer ability enabled
-		u32 m_sync      : 1; // synchronization ability enabled
-		u32 m_dual_view : 1; // dual view ability enabled
-		u32 m_out2      : 1; // secondary RGB output port enabled
-		u32 m_bus_width : 3; // bus width (log2 of number of bytes)
-		u32 m_ext_ctrl  : 1; // external display control ability enabled
+		u32 m_bg_layer :1; // background layer ability enabled
+		u32 m_sync :1; // synchronization ability enabled
+		u32 m_dual_view :1; // dual view ability enabled
+		u32 m_out2 :1; // secondary RGB output port enabled
+		u32 m_bus_width :3; // bus width (log2 of number of bytes)
+		u32 m_ext_ctrl :1; // external display control ability enabled
 	} bits;
 } cdc_config2_t;
-
 
 /*--------------------------------------------------------------------------
  * Enum: cdc_irq_type
@@ -165,14 +159,13 @@ typedef union {
  *                                   CDC is currently not in sync with external sync source
  */
 typedef enum {
-  CDC_IRQ_LINE                   = 0x01,
-  CDC_IRQ_FIFO_UNDERRUN          = 0x02,
-  CDC_IRQ_BUS_ERROR              = 0x04,
-  CDC_IRQ_RELOAD                 = 0x08,
-  CDC_IRQ_SLAVE_TIMING_NO_SIGNAL = 0x10,
-  CDC_IRQ_SLAVE_TIMING_NO_SYNC   = 0x20,
+	CDC_IRQ_LINE = 0x01,
+	CDC_IRQ_FIFO_UNDERRUN = 0x02,
+	CDC_IRQ_BUS_ERROR = 0x04,
+	CDC_IRQ_RELOAD = 0x08,
+	CDC_IRQ_SLAVE_TIMING_NO_SIGNAL = 0x10,
+	CDC_IRQ_SLAVE_TIMING_NO_SYNC = 0x20,
 } cdc_irq_type;
-
 
 /*--------------------------------------------------------------------------
  * Enum: cdc_blend_factor
@@ -188,17 +181,16 @@ typedef enum {
  *  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV - 1.0 - (Pixel alpha * constant alpha as blend factor)
  */
 typedef enum {
-  CDC_BLEND_ONE                           = 0,
-  CDC_BLEND_ZERO                          = 1,
-  CDC_BLEND_PIXEL_ALPHA                   = 2,
-  CDC_BLEND_PIXEL_ALPHA_INV               = 3,
-  CDC_BLEND_CONST_ALPHA                   = 4,
-  CDC_BLEND_CONST_ALPHA_INV               = 5,
-  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA     = 6,
-  CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV = 7,
+	CDC_BLEND_ONE = 0,
+	CDC_BLEND_ZERO = 1,
+	CDC_BLEND_PIXEL_ALPHA = 2,
+	CDC_BLEND_PIXEL_ALPHA_INV = 3,
+	CDC_BLEND_CONST_ALPHA = 4,
+	CDC_BLEND_CONST_ALPHA_INV = 5,
+	CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA = 6,
+	CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV = 7,
 } cdc_blend_factor;
 
-static const u8 cdc_formats_bpp[] = {4, 3, 2, 2, 2, 2, 1, 1};
-
+static const u8 cdc_formats_bpp[] = { 4, 3, 2, 2, 2, 2, 1, 1 };
 
 #endif // _CDC_REGS_H_

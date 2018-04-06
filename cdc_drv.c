@@ -36,265 +36,255 @@
 #include "cdc_hw_helpers.h"
 
 static const struct platform_device_id cdc_id_table[] = {
-  { "cdc", 0 },
-  { }
+	{ "cdc", 0 },
+	{ },
 };
 
-MODULE_DEVICE_TABLE(platform, cdc_id_table);
+MODULE_DEVICE_TABLE ( platform, cdc_id_table);
 
 static const struct of_device_id cdc_of_table[] = {
-  { .compatible = "tes,cdc-2.1", .data = NULL },
-  { }
+	{ .compatible =	"tes,cdc-2.1", .data = NULL },
+	{ },
 };
 
-MODULE_DEVICE_TABLE(of, cdc_of_table);
+MODULE_DEVICE_TABLE ( of, cdc_of_table);
 
 /* configuration dependent */
-static void cdc_init_dev(struct cdc_device *cdc) {
-  /* FIXME HACK for MesseDemo   */
-  spin_lock_init(&cdc->irq_slck);
-  init_waitqueue_head(&cdc->irq_waitq);
-}
-
-
-static void cdc_layer_init(struct cdc_device *cdc) {
-  int i;
-
-  cdc->planes = devm_kzalloc(cdc->dev, sizeof(*cdc->planes) * cdc->hw.layer_count, GFP_KERNEL);
-  for(i = 0; i < cdc->hw.layer_count; ++i) {
-    dev_dbg(cdc->dev, "Initializing layer %d\n", i);
-    cdc_hw_layer_setEnabled(cdc, i, false);
-    cdc->planes[i].hw_idx = i;
-    cdc->planes[i].cdc = cdc;
-    cdc->planes[i].used = false;
-  }
-}
-
-
-static int cdc_unload(struct drm_device *dev) {
-  struct cdc_device *cdc = dev->dev_private;
-
-  dev_dbg(cdc->dev, "%s\n", __func__);
-
-  // Disable VBLANK in DRM subsystem and hardware
-  drm_crtc_vblank_off(&cdc->crtc);
-  cdc_crtc_set_vblank(cdc, false);
-
-  if(cdc->fbdev) {
-    drm_fbdev_cma_fini(cdc->fbdev);
-  }
-
-  drm_kms_helper_poll_fini(dev);
-  drm_mode_config_cleanup(dev);
-  drm_vblank_cleanup(dev);
-
-  dev->irq_enabled = 0;
-  dev->dev_private = NULL;
-
-  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
-  cdc_hw_setEnabled(cdc, false);
-
-  return 0;
-}
-
-
-static irqreturn_t cdc_irq(int irq, void *arg)
+static void cdc_init_dev (struct cdc_device *cdc)
 {
-  struct cdc_device *cdc = (struct cdc_device *)arg;
-  u32 status;
-
-  status = cdc_read_reg(cdc, CDC_REG_GLOBAL_IRQ_STATUS);
-  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, status);
-
-  if(status & CDC_IRQ_LINE)
-  {
-    cdc_crtc_irq(&cdc->crtc);
-  }
-  if(status & CDC_IRQ_BUS_ERROR)
-  {
-    dev_err_ratelimited(cdc->dev, "BUS error IRQ triggered\n");
-  }
-  if(status & CDC_IRQ_FIFO_UNDERRUN)
-  {
-    // disable underrun IRQ to prevent IRQ flooding
-    cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
-
-    dev_err_ratelimited(cdc->dev, "FIFO underrun\n");
-  }
-  if(status & CDC_IRQ_SLAVE_TIMING_NO_SIGNAL)
-  {
-	  dev_err_ratelimited(cdc->dev, "SLAVE no signal\n");
-  }
-  if(status & CDC_IRQ_SLAVE_TIMING_NO_SYNC)
-  {
-	  dev_err_ratelimited(cdc->dev, "SLAVE no sync\n");
-  }
-
-  return IRQ_HANDLED;
+	/* FIXME HACK for MesseDemo   */
+	spin_lock_init(&cdc->irq_slck);
+	init_waitqueue_head(&cdc->irq_waitq);
 }
 
-
-bool cdc_init_irq(struct cdc_device *cdc)
+static void cdc_layer_init (struct cdc_device *cdc)
 {
-  struct platform_device *pdev = to_platform_device(cdc->dev);
+	int i;
 
-  int irq;
-  int ret;
-
-  irq = platform_get_irq(pdev, 0);
-  if(irq < 0) {
-    dev_err(cdc->dev, "Could not get platform IRQ number\n");
-    return false;
-  }
-
-  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, cdc->hw.irq_enabled);
-  cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0x1f);
-
-  ret = devm_request_irq(cdc->dev, irq, cdc_irq, 0, dev_name(cdc->dev), cdc);
-  if(ret < 0) {
-    dev_err(cdc->dev, "Failed to register IRQ\n");
-    return false;
-  }
-  return true;
+	cdc->planes = devm_kzalloc(cdc->dev,
+		sizeof(*cdc->planes) * cdc->hw.layer_count, GFP_KERNEL);
+	for (i = 0; i < cdc->hw.layer_count; ++i) {
+		dev_dbg(cdc->dev, "Initializing layer %d\n", i);
+		cdc_hw_layer_setEnabled(cdc, i, false);
+		cdc->planes[i].hw_idx = i;
+		cdc->planes[i].cdc = cdc;
+		cdc->planes[i].used = false;
+	}
 }
 
-
-static int cdc_load(struct drm_device *dev, unsigned long flags)
+static int cdc_unload (struct drm_device *dev)
 {
-  struct platform_device *pdev = dev->platformdev;
-  struct device_node *np = pdev->dev.of_node;
-  struct cdc_device *cdc;
-  struct resource *mem;
-  int ret = 0;
+	struct cdc_device *cdc = dev->dev_private;
 
-  if(np == NULL) {
-    dev_err(dev->dev, "no platform data\n");
-    return -ENODEV;
-  }
+	dev_dbg(cdc->dev, "%s\n", __func__);
 
-  cdc = devm_kzalloc(&pdev->dev, sizeof(*cdc), GFP_KERNEL);
-  if(cdc == NULL)
-  {
-    dev_err(dev->dev, "failed to allocate driver data\n");
-    return -ENOMEM;
-  }
+	// Disable VBLANK in DRM subsystem and hardware
+	drm_crtc_vblank_off(&cdc->crtc);
+	cdc_crtc_set_vblank(cdc, false);
 
-  init_waitqueue_head(&cdc->commit.wait);
+	if (cdc->fbdev) {
+		drm_fbdev_cma_fini(cdc->fbdev);
+	}
 
-  cdc->dev = &pdev->dev;
-  cdc->ddev = dev;
-  dev->dev_private = cdc;
+	drm_kms_helper_poll_fini(dev);
+	drm_mode_config_cleanup(dev);
+	drm_vblank_cleanup(dev);
 
-  cdc_init_dev(cdc);
+	dev->irq_enabled = 0;
+	dev->dev_private = NULL;
 
-  cdc->pclk = devm_clk_get(&pdev->dev, NULL);
-  if(IS_ERR(cdc->pclk)) {
-    dev_err(&pdev->dev, "failed to initialize pixel clock\n");
-    return PTR_ERR(cdc->pclk);
-  }
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
+	cdc_hw_setEnabled(cdc, false);
 
-  mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-  cdc->mmio = devm_ioremap_resource(&pdev->dev, mem);
-  dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start, cdc->mmio);
-  if(IS_ERR(cdc->mmio))
-  {
-    return PTR_ERR(cdc->mmio);
-  }
-
-  cdc_crtc_set_vblank(cdc, false);
-  cdc->hw.enabled = false;
-  cdc->hw.irq_enabled = 0;
-
-  /* get the hw configuration */
-  {
-	cdc_hw_revision_t hwrev;
-	cdc_config1_t conf1;
-	cdc_config2_t conf2;
-	u32 layer_count;
-
-	hwrev.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_HW_REVISION);
-	layer_count = cdc_read_reg(cdc, CDC_REG_GLOBAL_LAYER_COUNT);
-	conf1.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG1);
-	conf2.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG2);
-
-	cdc->hw.layer_count = layer_count;
-	cdc->hw.shadow_regs = conf1.bits.m_shadow_regs;
-	cdc->hw.bus_width = 1 << conf2.bits.m_bus_width;
-
-	dev_info(dev->dev, "CDC HW ver. %u.%u (rev. %u):\n", hwrev.bits.m_major, hwrev.bits.m_minor, hwrev.bits.m_revision);
-	dev_info(dev->dev, "\tlayer count: %u\n", cdc->hw.layer_count);
-	dev_info(dev->dev, "\tbus width: %u byte\n", cdc->hw.bus_width);
-  }
-
-  cdc_layer_init(cdc);
-
-  cdc_hw_resetRegisters(cdc);
-
-  cdc_init_irq(cdc);
-
-  ret = drm_vblank_init(dev, 1);
-  if(ret < 0)
-  {
-    dev_err(&pdev->dev, "failed to initialize vblank\n");
-    goto done;
-  }
-
-  ret = cdc_modeset_init(cdc);
-  if(ret < 0)
-  {
-    dev_err(&pdev->dev, "failed to initialize CDC Modeset\n");
-    goto done;
-  }
-
-  dev->irq_enabled = 1;
-
-  platform_set_drvdata(pdev, cdc);
-
-done:
-  if(ret)
-    cdc_unload(dev);
-
-  return ret;
+	return 0;
 }
 
-
-static void cdc_preclose(struct drm_device *dev, struct drm_file *file)
+static irqreturn_t cdc_irq (int irq, void *arg)
 {
-  struct cdc_device *cdc = dev->dev_private;
+	struct cdc_device *cdc = (struct cdc_device *) arg;
+	u32 status;
 
-  cdc_crtc_cancel_page_flip(&cdc->crtc, file);
+	status = cdc_read_reg(cdc, CDC_REG_GLOBAL_IRQ_STATUS);
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, status);
+
+	if (status & CDC_IRQ_LINE) {
+		cdc_crtc_irq(&cdc->crtc);
+	}
+	if (status & CDC_IRQ_BUS_ERROR) {
+		dev_err_ratelimited(cdc->dev, "BUS error IRQ triggered\n");
+	}
+	if (status & CDC_IRQ_FIFO_UNDERRUN) {
+		// disable underrun IRQ to prevent IRQ flooding
+		cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
+
+		dev_err_ratelimited(cdc->dev, "FIFO underrun\n");
+	}
+	if (status & CDC_IRQ_SLAVE_TIMING_NO_SIGNAL) {
+		dev_err_ratelimited(cdc->dev, "SLAVE no signal\n");
+	}
+	if (status & CDC_IRQ_SLAVE_TIMING_NO_SYNC) {
+		dev_err_ratelimited(cdc->dev, "SLAVE no sync\n");
+	}
+
+	return IRQ_HANDLED;
 }
 
-
-static void cdc_lastclose(struct drm_device *dev)
+bool cdc_init_irq (struct cdc_device *cdc)
 {
-  struct cdc_device *cdc = dev->dev_private;
+	struct platform_device *pdev = to_platform_device(cdc->dev);
 
-  drm_fbdev_cma_restore_mode(cdc->fbdev);
+	int irq;
+	int ret;
+
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(cdc->dev, "Could not get platform IRQ number\n");
+		return false;
+	}
+
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, cdc->hw.irq_enabled);
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0x1f);
+
+	ret = devm_request_irq(cdc->dev, irq, cdc_irq, 0, dev_name(cdc->dev),
+		cdc);
+	if (ret < 0) {
+		dev_err(cdc->dev, "Failed to register IRQ\n");
+		return false;
+	}
+
+	return true;
 }
 
-
-static int cdc_enable_vblank(struct drm_device *dev, unsigned int pipe)
+static int cdc_load (struct drm_device *dev, unsigned long flags)
 {
-  struct cdc_device *cdc = dev->dev_private;
-  cdc_crtc_set_vblank(cdc, true);
+	struct platform_device *pdev = dev->platformdev;
+	struct device_node *np = pdev->dev.of_node;
+	struct cdc_device *cdc;
+	struct resource *mem;
+	int ret = 0;
 
-  return 0;
+	if (np == NULL) {
+		dev_err(dev->dev, "no platform data\n");
+		return -ENODEV;
+	}
+
+	cdc = devm_kzalloc(&pdev->dev, sizeof(*cdc), GFP_KERNEL);
+	if (cdc == NULL) {
+		dev_err(dev->dev, "failed to allocate driver data\n");
+		return -ENOMEM;
+	}
+
+	init_waitqueue_head(&cdc->commit.wait);
+
+	cdc->dev = &pdev->dev;
+	cdc->ddev = dev;
+	dev->dev_private = cdc;
+
+	cdc_init_dev(cdc);
+
+	cdc->pclk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(cdc->pclk)) {
+		dev_err(&pdev->dev, "failed to initialize pixel clock\n");
+		return PTR_ERR(cdc->pclk);
+	}
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	cdc->mmio = devm_ioremap_resource(&pdev->dev, mem);
+	dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start,
+		cdc->mmio);
+	if (IS_ERR(cdc->mmio)) {
+		return PTR_ERR(cdc->mmio);
+	}
+
+	cdc_crtc_set_vblank(cdc, false);
+	cdc->hw.enabled = false;
+	cdc->hw.irq_enabled = 0;
+
+	/* get the hw configuration */
+	{
+		cdc_hw_revision_t hwrev;
+		cdc_config1_t conf1;
+		cdc_config2_t conf2;
+		u32 layer_count;
+
+		hwrev.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_HW_REVISION);
+		layer_count = cdc_read_reg(cdc, CDC_REG_GLOBAL_LAYER_COUNT);
+		conf1.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG1);
+		conf2.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG2);
+
+		cdc->hw.layer_count = layer_count;
+		cdc->hw.shadow_regs = conf1.bits.m_shadow_regs;
+		cdc->hw.bus_width = 1 << conf2.bits.m_bus_width;
+
+		dev_info(dev->dev, "CDC HW ver. %u.%u (rev. %u):\n",
+			 hwrev.bits.m_major, hwrev.bits.m_minor,
+			 hwrev.bits.m_revision);
+		dev_info(dev->dev, "\tlayer count: %u\n", cdc->hw.layer_count);
+		dev_info(dev->dev, "\tbus width: %u byte\n", cdc->hw.bus_width);
+	}
+
+	cdc_layer_init(cdc);
+
+	cdc_hw_resetRegisters(cdc);
+
+	cdc_init_irq(cdc);
+
+	ret = drm_vblank_init(dev, 1);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to initialize vblank\n");
+		goto done;
+	}
+
+	ret = cdc_modeset_init(cdc);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to initialize CDC Modeset\n");
+		goto done;
+	}
+
+	dev->irq_enabled = 1;
+
+	platform_set_drvdata(pdev, cdc);
+
+	done: if (ret)
+		cdc_unload(dev);
+
+	return ret;
 }
 
-static void cdc_disable_vblank(struct drm_device *dev, unsigned int pipe)
+static void cdc_preclose (struct drm_device *dev, struct drm_file *file)
 {
-  struct cdc_device *cdc = dev->dev_private;
-  cdc_crtc_set_vblank(cdc, false);
+	struct cdc_device *cdc = dev->dev_private;
+
+	cdc_crtc_cancel_page_flip(&cdc->crtc, file);
 }
 
+static void
+cdc_lastclose (struct drm_device *dev)
+{
+	struct cdc_device *cdc = dev->dev_private;
+
+	drm_fbdev_cma_restore_mode(cdc->fbdev);
+}
+
+static int cdc_enable_vblank (struct drm_device *dev, unsigned int pipe)
+{
+	struct cdc_device *cdc = dev->dev_private;
+	cdc_crtc_set_vblank(cdc, true);
+
+	return 0;
+}
+
+static void cdc_disable_vblank (struct drm_device *dev, unsigned int pipe)
+{
+	struct cdc_device *cdc = dev->dev_private;
+	cdc_crtc_set_vblank(cdc, false);
+}
 
 /* TODO: remove when cdc is fixed
  * Enforcing 256 byte pitch
  * */
-static int cdc_gem_cma_dumb_create(struct drm_file *file_priv,
-			    struct drm_device *drm,
-			    struct drm_mode_create_dumb *args)
+static int cdc_gem_cma_dumb_create (struct drm_file *file_priv,
+	struct drm_device *drm, struct drm_mode_create_dumb *args)
 {
 	args->pitch = (args->pitch + 255) & ~255;
 	args->size = args->pitch * args->height;
@@ -302,295 +292,297 @@ static int cdc_gem_cma_dumb_create(struct drm_file *file_priv,
 	return drm_gem_cma_dumb_create_internal(file_priv, drm, args);
 }
 
-
 #ifdef CONFIG_DEBUG_FS
 static int cdc_regs_show(struct seq_file *m, void *arg)
 {
-        struct drm_info_node *node = (struct drm_info_node *) m->private;
-        struct drm_device *dev = node->minor->dev;
-        struct cdc_device *cdc = dev->dev_private;
-        unsigned i;
+	struct drm_info_node *node = (struct drm_info_node *) m->private;
+	struct drm_device *dev = node->minor->dev;
+	struct cdc_device *cdc = dev->dev_private;
+	unsigned i;
 
-        pm_runtime_get_sync(dev->dev);
+	pm_runtime_get_sync(dev->dev);
 
-        /* Show the first few registers */
-        for(i=0; i<(0x20 + 0x20*cdc->hw.layer_count); i += 4)
-        {
-          u32 reg = cdc_read_reg(cdc, i);
+	/* Show the first few registers */
+	for(i=0; i<(0x20 + 0x20*cdc->hw.layer_count); i += 4)
+	{
+		u32 reg = cdc_read_reg(cdc, i);
 
-          if(i == 0)
-        	  seq_printf(m, "Global:\n");
-          else if(i % 0x20 == 0)
-        	  seq_printf(m, "Layer %d:\n", i / 0x20);
+		if(i == 0)
+			seq_printf(m, "Global:\n");
+		else if(i % 0x20 == 0)
+			seq_printf(m, "Layer %d:\n", i / 0x20);
 
-          seq_printf(m, "%03x: %08x", i * 4, reg);
-          reg = cdc_read_reg(cdc, i+1);
-          seq_printf(m, " %08x",   reg);
-          reg = cdc_read_reg(cdc, i+2);
-          seq_printf(m, " %08x",   reg);
-          reg = cdc_read_reg(cdc, i+3);
-          seq_printf(m, " %08x\n", reg);
-        }
+		seq_printf(m, "%03x: %08x", i * 4, reg);
+		reg = cdc_read_reg(cdc, i+1);
+		seq_printf(m, " %08x", reg);
+		reg = cdc_read_reg(cdc, i+2);
+		seq_printf(m, " %08x", reg);
+		reg = cdc_read_reg(cdc, i+3);
+		seq_printf(m, " %08x\n", reg);
+	}
 
-        pm_runtime_put_sync(dev->dev);
+	pm_runtime_put_sync(dev->dev);
 
-        return 0;
+	return 0;
 }
 
 static int cdc_dump_fb(struct seq_file *m, void *arg)
 {
-  struct drm_info_node *node = (struct drm_info_node *) m->private;
-  struct drm_device *dev = node->minor->dev;
-  struct drm_framebuffer *fb;
-  int ret;
-  int i = 0;
+	struct drm_info_node *node = (struct drm_info_node *) m->private;
+	struct drm_device *dev = node->minor->dev;
+	struct drm_framebuffer *fb;
+	int ret;
+	int i = 0;
 
-  ret = mutex_lock_interruptible(&dev->mode_config.mutex);
-  if(ret)
-          return ret;
+	ret = mutex_lock_interruptible(&dev->mode_config.mutex);
+	if(ret)
+		return ret;
 
-  ret = mutex_lock_interruptible(&dev->struct_mutex);
-  if(ret) {
-          mutex_unlock(&dev->mode_config.mutex);
-          return ret;
-  }
+	ret = mutex_lock_interruptible(&dev->struct_mutex);
+	if(ret) {
+		mutex_unlock(&dev->mode_config.mutex);
+		return ret;
+	}
 
-  list_for_each_entry(fb, &dev->mode_config.fb_list, head)
-  {
-    struct drm_gem_cma_object *obj = drm_fb_cma_get_gem_obj(fb, 0);
+	list_for_each_entry(fb, &dev->mode_config.fb_list, head)
+	{
+		struct drm_gem_cma_object *obj = drm_fb_cma_get_gem_obj(fb, 0);
 
-    if(i==1)
-    {
-      seq_write(m, obj->vaddr, 800*600*4); /* FIXME: static size, bad hack! */
-    }
-    ++i;
-  }
+		if(i==1)
+		{
+			seq_write(m, obj->vaddr, 800*600*4); /* FIXME: static size, bad hack! */
+		}
+		++i;
+	}
 
-  mutex_unlock(&dev->struct_mutex);
-  mutex_unlock(&dev->mode_config.mutex);
+	mutex_unlock(&dev->struct_mutex);
+	mutex_unlock(&dev->mode_config.mutex);
 
-  return 0;
+	return 0;
 }
 
 static int cdc_mm_show(struct seq_file *m, void *arg)
 {
-  struct drm_info_node *node = (struct drm_info_node *) m->private;
-  struct drm_device *dev = node->minor->dev;
-  return drm_mm_dump_table(m, &dev->vma_offset_manager->vm_addr_space_mm);
+	struct drm_info_node *node = (struct drm_info_node *) m->private;
+	struct drm_device *dev = node->minor->dev;
+	return drm_mm_dump_table(m, &dev->vma_offset_manager->vm_addr_space_mm);
 }
 
 static struct drm_info_list cdc_debugfs_list[] = {
-  { "regs",   cdc_regs_show, 0 },
-  { "mm",     cdc_mm_show,   0 },
-  { "fb",     drm_fb_cma_debugfs_show, 0 },
-  { "fbdump", cdc_dump_fb, 0 },
+	{ "regs", cdc_regs_show, 0 },
+	{ "mm", cdc_mm_show, 0 },
+	{ "fb", drm_fb_cma_debugfs_show, 0 },
+	{ "fbdump", cdc_dump_fb, 0 },
 };
 
 static int cdc_debugfs_init(struct drm_minor *minor)
 {
-  struct drm_device *dev = minor->dev;
-  int ret;
+	struct drm_device *dev = minor->dev;
+	int ret;
 
-  ret = drm_debugfs_create_files(cdc_debugfs_list,
-                  ARRAY_SIZE(cdc_debugfs_list),
-                  minor->debugfs_root, minor);
+	ret = drm_debugfs_create_files(cdc_debugfs_list,
+		ARRAY_SIZE(cdc_debugfs_list),
+		minor->debugfs_root, minor);
 
-  if(ret) {
-    dev_err(dev->dev, "could not install cdc_debugfs_list\n");
-    return ret;
-  }
+	if(ret) {
+		dev_err(dev->dev, "could not install cdc_debugfs_list\n");
+		return ret;
+	}
 
-  return ret;
+	return ret;
 }
 
 static void cdc_debugfs_cleanup(struct drm_minor *minor)
 {
-  drm_debugfs_remove_files(cdc_debugfs_list,
-                  ARRAY_SIZE(cdc_debugfs_list), minor);
+	drm_debugfs_remove_files(cdc_debugfs_list,
+		ARRAY_SIZE(cdc_debugfs_list), minor);
 }
 #endif
-
 
 #include "cdc_ioctl.h"
 
-long cdc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+long cdc_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 {
-  struct drm_file *file_priv = filp->private_data;
-  struct drm_device *dev;
-  struct cdc_device *cdc;
-  char stack_data[128];
-  unsigned int nr = HACK_IOCTL_NR(cmd);
-  unsigned int size;
+	struct drm_file *file_priv = filp->private_data;
+	struct drm_device *dev;
+	struct cdc_device *cdc;
+	char stack_data[128];
+	unsigned int nr = HACK_IOCTL_NR(cmd);
+	unsigned int size;
 
-  dev = file_priv->minor->dev;
-  cdc = dev->dev_private;
+	dev = file_priv->minor->dev;
+	cdc = dev->dev_private;
 
-  if(nr >= 0xe0)
-  {
-    size = _IOC_SIZE(cmd);
+	if (nr >= 0xe0) {
+		size = _IOC_SIZE(cmd);
 
-    if(cmd & IOC_IN)
-    {
-      if(copy_from_user(stack_data, (void __user *) arg, size) != 0)
-      {
-        return -EFAULT;
-      }
-    }
+		if (cmd & IOC_IN) {
+			if (copy_from_user(stack_data, (void __user *) arg, size) != 0) {
+				return -EFAULT;
+			}
+		}
 
-    /* TODO: Dispatching */
-    switch(nr)
-    {
-    case 0xe0:
-    {
-      struct hack_set_cb *set_cb = (struct hack_set_cb*) stack_data;
+		/* TODO: Dispatching */
+		switch (nr) {
+		case 0xe0: {
+			struct hack_set_cb *set_cb =
+				(struct hack_set_cb*) stack_data;
 
-      cdc_hw_setCBAddress(cdc, 0, (unsigned int) set_cb->phy_addr);
-      cdc_hw_layer_setCBSize(cdc, 0, set_cb->width, set_cb->height, set_cb->pitch);
-      cdc_hw_triggerShadowReload(cdc, true);
-      break;
-    }
+			cdc_hw_setCBAddress(cdc, 0,
+				(unsigned int) set_cb->phy_addr);
+			cdc_hw_layer_setCBSize(cdc, 0, set_cb->width,
+				set_cb->height, set_cb->pitch);
+			cdc_hw_triggerShadowReload(cdc, true);
+			break;
+		}
 
-    case 0xe1:
-    {
-      struct hack_set_winpos *winpos = (struct hack_set_winpos*) stack_data;
+		case 0xe1: {
+			struct hack_set_winpos *winpos =
+				(struct hack_set_winpos*) stack_data;
 
-      cdc_hw_setWindow(cdc, 0, winpos->x, winpos->y, winpos->width, winpos->height, winpos->width*4);
-      cdc_hw_layer_setEnabled(cdc, 0, true);
-      cdc_hw_triggerShadowReload(cdc, true);
-      break;
-    }
+			cdc_hw_setWindow(cdc, 0, winpos->x, winpos->y,
+				winpos->width, winpos->height,
+				winpos->width * 4);
+			cdc_hw_layer_setEnabled(cdc, 0, true);
+			cdc_hw_triggerShadowReload(cdc, true);
+			break;
+		}
 
-    case 0xe2:
-    {
-      struct hack_set_alpha *alpha = (struct hack_set_alpha*) stack_data;
+		case 0xe2: {
+			struct hack_set_alpha *alpha =
+				(struct hack_set_alpha*) stack_data;
 
-      cdc_hw_setBlendMode(cdc, 0, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
-      cdc_hw_layer_setConstantAlpha(cdc, 0, alpha->alpha);
-      cdc_hw_triggerShadowReload(cdc, true);
-      break;
-    }
+			cdc_hw_setBlendMode(cdc, 0,
+				CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA,
+				CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
+			cdc_hw_layer_setConstantAlpha(cdc, 0, alpha->alpha);
+			cdc_hw_triggerShadowReload(cdc, true);
+			break;
+		}
 
-    case 0xe3:
-    {
-      unsigned long flags;
+		case 0xe3: {
+			unsigned long flags;
 
-      spin_lock_irqsave(&cdc->irq_slck, flags);
-      cdc->irq_stat = 0;
-      spin_unlock_irqrestore(&cdc->irq_slck, flags);
-      wait_event_interruptible(cdc->irq_waitq, cdc->irq_stat);
+			spin_lock_irqsave(&cdc->irq_slck, flags);
+			cdc->irq_stat = 0;
+			spin_unlock_irqrestore(&cdc->irq_slck, flags);
+			wait_event_interruptible(cdc->irq_waitq, cdc->irq_stat);
 
-      break;
-    }
+			break;
+		}
 
-    default:
-      printk(KERN_ERR "Unknown IOCTL (nr = %u)!\n", nr);
-    }
+		default:
+		printk(KERN_ERR "Unknown IOCTL (nr = %u)!\n", nr);
+	}
 
-    return 0;
-  }
-
-  return drm_ioctl(filp, cmd, arg);
+	return 0;
 }
 
+return drm_ioctl(filp, cmd, arg);
+}
 
 static const struct file_operations cdc_fops = {
-  .owner          = THIS_MODULE,
-  .open           = drm_open,
-  .release        = drm_release,
-  .unlocked_ioctl = cdc_ioctl,
+	.owner = THIS_MODULE,
+	.open = drm_open,
+	.release = drm_release,
+	.unlocked_ioctl = cdc_ioctl,
 #ifdef CONFIG_COMPAT
-  .compat_ioctl   = drm_compat_ioctl,
+	.compat_ioctl = drm_compat_ioctl,
 #endif
-  .poll           = drm_poll,
-  .read           = drm_read,
-  .llseek         = no_llseek,
-  .mmap           = drm_gem_cma_mmap,
+	.poll = drm_poll,
+	.read = drm_read,
+	.llseek = no_llseek,
+	.mmap =	drm_gem_cma_mmap,
 };
 
 static struct drm_driver cdc_driver = {
-  .driver_features           = DRIVER_GEM | DRIVER_MODESET | DRIVER_PRIME | DRIVER_ATOMIC,
-  .load                      = cdc_load,
-  .unload                    = cdc_unload,
-  .preclose                  = cdc_preclose,
-  .lastclose                 = cdc_lastclose,
-  .get_vblank_counter        = drm_vblank_no_hw_counter,
-  .enable_vblank             = cdc_enable_vblank,
-  .disable_vblank            = cdc_disable_vblank,
-  .gem_free_object           = drm_gem_cma_free_object,
-  .prime_handle_to_fd        = drm_gem_prime_handle_to_fd,
-  .prime_fd_to_handle        = drm_gem_prime_fd_to_handle,
-  .gem_prime_import          = drm_gem_prime_import,
-  .gem_prime_export          = drm_gem_prime_export,
-  .gem_prime_get_sg_table    = drm_gem_cma_prime_get_sg_table,
-  .gem_prime_import_sg_table = drm_gem_cma_prime_import_sg_table,
-  .gem_prime_vmap            = drm_gem_cma_prime_vmap,
-  .gem_prime_vunmap          = drm_gem_cma_prime_vunmap,
-  .gem_prime_mmap            = drm_gem_cma_prime_mmap,
-  .gem_vm_ops                = &drm_gem_cma_vm_ops,
-  .dumb_create               = cdc_gem_cma_dumb_create,
-  .dumb_map_offset           = drm_gem_cma_dumb_map_offset,
-  .dumb_destroy              = drm_gem_dumb_destroy,
+	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_PRIME | DRIVER_ATOMIC,
+	.load = cdc_load,
+	.unload = cdc_unload,
+	.preclose = cdc_preclose,
+	.lastclose = cdc_lastclose,
+	.get_vblank_counter = drm_vblank_no_hw_counter,
+	.enable_vblank = cdc_enable_vblank,
+	.disable_vblank = cdc_disable_vblank,
+	.gem_free_object = drm_gem_cma_free_object,
+	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
+	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
+	.gem_prime_import = drm_gem_prime_import,
+	.gem_prime_export = drm_gem_prime_export,
+	.gem_prime_get_sg_table = drm_gem_cma_prime_get_sg_table,
+	.gem_prime_import_sg_table = drm_gem_cma_prime_import_sg_table,
+	.gem_prime_vmap = drm_gem_cma_prime_vmap,
+	.gem_prime_vunmap = drm_gem_cma_prime_vunmap,
+	.gem_prime_mmap = drm_gem_cma_prime_mmap,
+	.gem_vm_ops = &drm_gem_cma_vm_ops,
+	.dumb_create = cdc_gem_cma_dumb_create,
+	.dumb_map_offset = drm_gem_cma_dumb_map_offset,
+	.dumb_destroy = drm_gem_dumb_destroy,
 #ifdef CONFIG_DEBUG_FS
-  .debugfs_init              = cdc_debugfs_init,
-  .debugfs_cleanup           = cdc_debugfs_cleanup,
+	.debugfs_init = cdc_debugfs_init,
+	.debugfs_cleanup = cdc_debugfs_cleanup,
 #endif
-  .fops  = &cdc_fops,
-  .name  = "tes-cdc",
-  .desc  = "TES CDC Display Controller",
-  .date  = "20170309",
-  .major = 1,
-  .minor = 0,
+	.fops = &cdc_fops,
+	.name = "tes-cdc",
+	.desc = "TES CDC Display Controller",
+	.date = "20170309",
+	.major = 1,
+	.minor = 0,
 };
 
-static int cdc_pm_suspend(struct device *dev) {
-  struct cdc_device *cdc = dev_get_drvdata(dev);
+static int cdc_pm_suspend (struct device *dev)
+{
+	struct cdc_device *cdc = dev_get_drvdata(dev);
 
-  dev_dbg(dev, "%s\n", __func__);
+	dev_dbg(dev, "%s\n", __func__);
 
-  /* TODO: Suspend */
-  drm_kms_helper_poll_disable(cdc->ddev);
+	/* TODO: Suspend */
+	drm_kms_helper_poll_disable(cdc->ddev);
 
-  return 0;
+	return 0;
 }
 
-static int cdc_pm_resume(struct device *dev) {
-  struct cdc_device *cdc = dev_get_drvdata(dev);
+static int cdc_pm_resume (struct device *dev)
+{
+	struct cdc_device *cdc = dev_get_drvdata(dev);
 
-  dev_dbg(dev, "%s\n", __func__);
+	dev_dbg(dev, "%s\n", __func__);
 
-  /* TODO: Resume */
-  drm_kms_helper_poll_enable(cdc->ddev);
+	/* TODO: Resume */
+	drm_kms_helper_poll_enable(cdc->ddev);
 
-  return 0;
+	return 0;
 }
 
 static const struct dev_pm_ops cdc_pm_ops = {
-  SET_SYSTEM_SLEEP_PM_OPS(cdc_pm_suspend, cdc_pm_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(cdc_pm_suspend, cdc_pm_resume)
 };
 
-static int cdc_probe(struct platform_device *pdev) {
-  return drm_platform_init(&cdc_driver, pdev);
+static int cdc_probe (struct platform_device *pdev)
+{
+	return drm_platform_init(&cdc_driver, pdev);
 }
 
-static int cdc_remove(struct platform_device *pdev) {
-  struct cdc_device *cdc = platform_get_drvdata(pdev);
+static int cdc_remove (struct platform_device *pdev)
+{
+	struct cdc_device *cdc = platform_get_drvdata(pdev);
 
-  drm_put_dev(cdc->ddev);
-  return 0;
+	drm_put_dev(cdc->ddev);
+	return 0;
 }
 
 static struct platform_driver cdc_platform_driver = {
-  .probe = cdc_probe,
-  .remove = cdc_remove,
-  .driver = {
-    .name = "tes-cdc",
-    .pm = &cdc_pm_ops,
-    .of_match_table = cdc_of_table,
-  },
-  .id_table = cdc_id_table,
+	.probe = cdc_probe,
+	.remove = cdc_remove,
+	.driver = {
+		.name = "tes-cdc",
+		.pm = &cdc_pm_ops,
+		.of_match_table = cdc_of_table,
+	},
+	.id_table = cdc_id_table,
 };
 
-module_platform_driver(cdc_platform_driver);
+module_platform_driver (cdc_platform_driver);
 
 MODULE_AUTHOR("Christian Thaler <christian.thaler@tes-dst.com>");
 MODULE_DESCRIPTION("TES CDC Display Controller DRM Driver");

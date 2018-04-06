@@ -15,6 +15,7 @@
 
 #include "cdc_encoder.h"
 
-int cdc_lvds_connector_init(struct cdc_device *cdc, struct cdc_encoder *enc, struct device_node *np);
+int cdc_lvds_connector_init(struct cdc_device *cdc, struct cdc_encoder *enc,
+	struct device_node *np);
 
 #endif /* CDC_LVDSCON_H_ */

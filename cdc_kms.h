@@ -20,13 +20,14 @@ struct drm_file;
 struct drm_mode_create_dumb;
 
 struct cdc_format {
-  unsigned int cdc_hw_format;
-  u32 fourcc;
-  unsigned int bpp;
+	unsigned int cdc_hw_format;
+	u32 fourcc;
+	unsigned int bpp;
 };
 
-int cdc_modeset_init(struct cdc_device *cdc);
-int cdc_dumb_create(struct drm_device *dev, struct drm_file *file, struct drm_mode_create_dumb *args);
-const struct cdc_format *cdc_format_info(__u32 drm_fourcc);
+int cdc_modeset_init (struct cdc_device *cdc);
+int cdc_dumb_create (struct drm_device *dev, struct drm_file *file,
+	struct drm_mode_create_dumb *args);
+const struct cdc_format *cdc_format_info (__u32 drm_fourcc);
 
 #endif

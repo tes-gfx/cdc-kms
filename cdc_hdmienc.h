@@ -13,7 +13,7 @@
 #ifndef __CDC_HDMIENC_H__
 #define __CDC_HDMIENC_H__
 
-int cdc_hdmienc_init(struct cdc_device *cdc,
-                     struct cdc_encoder *enc, struct device_node *np);
+int cdc_hdmienc_init (struct cdc_device *cdc, struct cdc_encoder *enc,
+	struct device_node *np);
 
 #endif //__CDC_HDMIENC_H__

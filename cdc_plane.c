@@ -23,12 +23,10 @@
 #include "cdc_plane.h"
 #include "cdc_hw_helpers.h"
 
-
 static struct cdc_plane *to_cdc_plane(struct drm_plane *p)
 {
 	return container_of(p, struct cdc_plane, plane);
 }
-
 
 void cdc_plane_setup_fb(struct cdc_plane *plane)
 {
@@ -38,37 +36,40 @@ void cdc_plane_setup_fb(struct cdc_plane *plane)
 	struct drm_gem_cma_object *gem;
 	unsigned int byte_offset;
 
-	byte_offset = (plane->plane.state->src_y >> 16) * fb->pitches[0] +
-		(plane->plane.state->src_x >> 16) * (fb->bits_per_pixel / 8);
+	byte_offset = (plane->plane.state->src_y >> 16) * fb->pitches[0]
+		+ (plane->plane.state->src_x >> 16) * (fb->bits_per_pixel / 8);
 	gem = drm_fb_cma_get_gem_obj(fb, 0);
-	cdc_hw_setCBAddress(cdc, layer, gem->paddr + fb->offsets[0] + byte_offset);
+	cdc_hw_setCBAddress(cdc, layer,
+		gem->paddr + fb->offsets[0] + byte_offset);
 }
-
 
 void cdc_plane_setup_window(struct drm_plane *plane)
 {
 	struct cdc_plane *cplane = to_cdc_plane(plane);
 	struct cdc_device *cdc = cplane->cdc;
 	unsigned int layer = cplane->hw_idx;
-	const struct drm_display_mode *mode = &plane->state->crtc->state->adjusted_mode;
+	const struct drm_display_mode *mode =
+		&plane->state->crtc->state->adjusted_mode;
 	int32_t x = plane->state->crtc_x;
 	int32_t y = plane->state->crtc_y;
 	int32_t w = plane->state->crtc_w;
 	int32_t h = plane->state->crtc_h;
 
 	/* Do clipping. CDC requires windows that lie inside of the screen. */
-	if(x >= mode->hdisplay)
+	if (x >= mode->hdisplay)
 		x = mode->hdisplay - 1;
-	if(y >= mode->vdisplay)
+	if (y >= mode->vdisplay)
 		y = mode->vdisplay - 1;
-	if((x + w) > mode->hdisplay)
-		w -= x+w - mode->hdisplay;
-	if((y + h) > mode->vdisplay)
-		h -= y+h - mode->vdisplay;
+	if ((x + w) > mode->hdisplay)
+		w -= x + w - mode->hdisplay;
+	if ((y + h) > mode->vdisplay)
+		h -= y + h - mode->vdisplay;
 
-	dev_dbg(cdc->dev, "%s for layer %d (plane: 0x%p, cdc: 0x%p, crtc: 0x%p)\n", __func__, layer, plane, cdc, plane->crtc);
+	dev_dbg(cdc->dev, "%s for layer %d (plane: 0x%p, cdc: 0x%p, crtc: 0x%p)\n",
+		__func__, layer, plane, cdc, plane->crtc);
 	dev_dbg(cdc->dev, "plane state crtc: %d\n", plane->state->crtc->base.id);
-	dev_dbg(cdc->dev, "setWindow(%d,%d:%dx%d)@%dx%d\n", x, y, w, h, mode->hdisplay, mode->vdisplay);
+	dev_dbg(cdc->dev, "setWindow(%d,%d:%dx%d)@%dx%d\n", x, y, w, h, mode->hdisplay,
+		mode->vdisplay);
 
 	cdc->planes[layer].window_width = w;
 	cdc->planes[layer].window_height = h;
@@ -78,7 +79,6 @@ void cdc_plane_setup_window(struct drm_plane *plane)
 	cdc_hw_setWindow(cdc, layer, x, y, w, h, plane->state->fb->pitches[0]);
 }
 
-
 int cdc_plane_disable(struct drm_plane *plane)
 {
 	struct cdc_plane *cplane = to_cdc_plane(plane);
@@ -87,7 +87,7 @@ int cdc_plane_disable(struct drm_plane *plane)
 
 	dev_dbg(cdc->dev, "%s (plane: %d)\n", __func__, cplane->hw_idx);
 
-	if(!cplane->enabled) {
+	if (!cplane->enabled) {
 		return 0;
 	}
 
@@ -97,9 +97,8 @@ int cdc_plane_disable(struct drm_plane *plane)
 	return 0;
 }
 
-
 static void cdc_plane_atomic_update(struct drm_plane *plane,
-                                    struct drm_plane_state *old_state)
+	struct drm_plane_state *old_state)
 {
 	struct cdc_plane *cplane = to_cdc_plane(plane);
 	struct cdc_device *cdc = cplane->cdc;
@@ -110,56 +109,57 @@ static void cdc_plane_atomic_update(struct drm_plane *plane,
 
 	dev_dbg(cdc->dev, "%s (plane: %d)\n", __func__, cplane->hw_idx);
 
-	if(old_cstate->alpha != new_cstate->alpha) {
-		dev_dbg(cdc->dev, "Plane %d: setting alpha to %u\n", layer, new_cstate->alpha);
+	if (old_cstate->alpha != new_cstate->alpha) {
+		dev_dbg(cdc->dev, "Plane %d: setting alpha to %u\n", layer,
+			new_cstate->alpha);
 		cdc_hw_layer_setConstantAlpha(cdc, layer, new_cstate->alpha);
 	}
 
 	// Setup the plane if a crtc is bound to it
-	if(new_state->crtc) {
+	if (new_state->crtc) {
 		/* plane setup */
 		/* todo: find out what to change and only change that, like with the window */
-		cdc_hw_setPixelFormat(cdc, layer, cdc_format_info(new_state->fb->pixel_format)->cdc_hw_format);
+		cdc_hw_setPixelFormat(cdc, layer,
+			cdc_format_info(new_state->fb->pixel_format)->cdc_hw_format);
 
 		// note: in the CDC default config, only CONS_ALPHA(_INV) and ALPHA_X_CONST_ALPHA(_INV) are available
-		if((layer != 0) && (new_state->fb->pixel_format != DRM_FORMAT_XRGB8888))	{
+		if ((layer != 0)
+			&& (new_state->fb->pixel_format != DRM_FORMAT_XRGB8888)) {
 			// Enable pixel alpha for overlay layers only
-			cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA, CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
-		}
-		else {
+			cdc_hw_setBlendMode(cdc, layer,
+				CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA,
+				CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
+		} else {
 			// No blending for primary layer and layers with XRGB8888 format (ignore the alpha value)
-			cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_CONST_ALPHA, CDC_BLEND_CONST_ALPHA_INV);
+			cdc_hw_setBlendMode(cdc, layer, CDC_BLEND_CONST_ALPHA,
+				CDC_BLEND_CONST_ALPHA_INV);
 		}
 
 		cdc_plane_setup_fb(cplane);
 
-		if(	(old_state->crtc_x != new_state->crtc_x) ||
-			(old_state->crtc_y != new_state->crtc_y) ||
-			(old_state->crtc_h != new_state->crtc_h) ||
-			(old_state->crtc_w != new_state->crtc_w) ) {
+		if ((old_state->crtc_x != new_state->crtc_x)
+			|| (old_state->crtc_y != new_state->crtc_y)
+			|| (old_state->crtc_h != new_state->crtc_h)
+			|| (old_state->crtc_w != new_state->crtc_w)) {
 			cdc_plane_setup_window(plane);
 		}
 
-		if(!old_state->crtc)
+		if (!old_state->crtc)
 			cdc_hw_layer_setEnabled(cdc, layer, true);
-	}
-	else {
-		if(old_state->crtc)
-			cdc_hw_layer_setEnabled(cdc, layer, false);
+
+	} else if (old_state->crtc) {
+		cdc_hw_layer_setEnabled(cdc, layer, false);
 	}
 }
 
-
 static int cdc_plane_atomic_set_property(struct drm_plane *plane,
-                                         struct drm_plane_state *state,
-                                         struct drm_property *property,
-                                         uint64_t val)
+	struct drm_plane_state *state, struct drm_property *property, uint64_t val)
 {
 	struct cdc_plane_state *cstate = to_cdc_plane_state(state);
 	struct cdc_plane *cplane = to_cdc_plane(plane);
 	struct cdc_device *cdc = cplane->cdc;
 
-	if( property == cdc->alpha)
+	if (property == cdc->alpha)
 		cstate->alpha = val;
 	else
 		return -EINVAL;
@@ -167,25 +167,23 @@ static int cdc_plane_atomic_set_property(struct drm_plane *plane,
 	return 0;
 }
 
-
 static int cdc_plane_atomic_get_property(struct drm_plane *plane,
-                                         const struct drm_plane_state *state,
-                                         struct drm_property *property,
-                                         uint64_t *val)
+	const struct drm_plane_state *state, struct drm_property *property,
+	uint64_t *val)
 {
-	const struct cdc_plane_state *cstate =
-			container_of(state, const struct cdc_plane_state, state);
+	const struct cdc_plane_state
+	*cstate =
+		container_of(state, const struct cdc_plane_state, state);
 	struct cdc_plane *cplane = to_cdc_plane(plane);
 	struct cdc_device *cdc = cplane->cdc;
 
-	if( property == cdc->alpha)
+	if (property == cdc->alpha)
 		*val = cstate->alpha;
 	else
 		return -EINVAL;
 
 	return 0;
 }
-
 
 static void cdc_plane_reset(struct drm_plane *plane)
 {
@@ -208,7 +206,7 @@ static void cdc_plane_reset(struct drm_plane *plane)
 }
 
 static struct drm_plane_state *
-cdc_plane_atomic_duplicate_state(struct drm_plane *plane)
+	cdc_plane_atomic_duplicate_state(struct drm_plane *plane)
 {
 	struct cdc_plane_state *state;
 	struct cdc_plane_state *copy;
@@ -225,7 +223,7 @@ cdc_plane_atomic_duplicate_state(struct drm_plane *plane)
 }
 
 static void cdc_plane_atomic_destroy_state(struct drm_plane *plane,
-					       struct drm_plane_state *state)
+	struct drm_plane_state *state)
 {
 	if (state->fb)
 		drm_framebuffer_unreference(state->fb);
@@ -233,11 +231,9 @@ static void cdc_plane_atomic_destroy_state(struct drm_plane *plane,
 	kfree(to_cdc_plane_state(state));
 }
 
-
 static const struct drm_plane_helper_funcs cdc_plane_helper_funcs = {
 	.atomic_update = cdc_plane_atomic_update,
 };
-
 
 static const struct drm_plane_funcs cdc_plane_funcs = {
 	.update_plane = drm_atomic_helper_update_plane,
@@ -251,7 +247,6 @@ static const struct drm_plane_funcs cdc_plane_funcs = {
 	.atomic_destroy_state = cdc_plane_atomic_destroy_state,
 };
 
-
 static const uint32_t cdc_supported_formats[] = {
 	DRM_FORMAT_XRGB8888,
 	DRM_FORMAT_ARGB8888,
@@ -261,7 +256,6 @@ static const uint32_t cdc_supported_formats[] = {
 	DRM_FORMAT_ARGB1555,
 };
 
-
 int cdc_planes_init(struct cdc_device *cdc)
 {
 	int ret;
@@ -270,37 +264,33 @@ int cdc_planes_init(struct cdc_device *cdc)
 	dev_dbg(cdc->dev, "%s\n", __func__);
 
 	cdc->alpha = drm_property_create_range(cdc->ddev, 0, "alpha", 0, 255);
-	if(cdc->alpha == NULL)
+	if (cdc->alpha == NULL)
 		return -ENOMEM;
 
-	for(i = 0; i < cdc->hw.layer_count; ++i) {
+	for (i = 0; i < cdc->hw.layer_count; ++i) {
 		enum drm_plane_type type;
 		struct cdc_plane *plane = &cdc->planes[i];
 
-		if(i == 0)
+		if (i == 0)
 			type = DRM_PLANE_TYPE_PRIMARY;
-		else if(i == cdc->hw.layer_count-1)
+		else if (i == cdc->hw.layer_count - 1)
 			type = DRM_PLANE_TYPE_CURSOR;
 		else
 			type = DRM_PLANE_TYPE_OVERLAY;
 
 		dev_dbg(cdc->dev, "Initializing plane %d as %d type...\n", i, type);
-		ret = drm_universal_plane_init(cdc->ddev,
-			&plane->plane,
-			1,
-			&cdc_plane_funcs,
-			cdc_supported_formats,
-			ARRAY_SIZE(cdc_supported_formats),
-			type,
+		ret = drm_universal_plane_init(cdc->ddev, &plane->plane, 1,
+			&cdc_plane_funcs, cdc_supported_formats,
+			ARRAY_SIZE(cdc_supported_formats), type,
 			NULL);
-		if(ret < 0) {
+		if (ret < 0) {
 			dev_err(cdc->dev, "could not initialize plane %d...\n", i);
 			return ret;
 		}
 
 		drm_plane_helper_add(&plane->plane, &cdc_plane_helper_funcs);
 
-		if(type != DRM_PLANE_TYPE_OVERLAY)
+		if (type != DRM_PLANE_TYPE_OVERLAY)
 			continue;
 
 		dev_dbg(cdc->dev, "Adding alpha property to plane %d...\n", i);

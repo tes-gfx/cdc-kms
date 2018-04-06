@@ -14,21 +14,21 @@
 #define CDC_IOCTL_H_
 
 struct hack_set_cb {
-  void *phy_addr;
-  int   width;
-  int   pitch;
-  int   height;
+	void *phy_addr;
+	int width;
+	int pitch;
+	int height;
 };
 
 struct hack_set_winpos {
-  int x;
-  int y;
-  int width;
-  int height;
+	int x;
+	int y;
+	int width;
+	int height;
 };
 
 struct hack_set_alpha {
-  int alpha;
+	int alpha;
 };
 
 #define HACK_IOCTL_BASE                  'h'

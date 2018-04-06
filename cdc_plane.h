@@ -19,8 +19,8 @@ struct cdc_plane_state {
 	unsigned int alpha;
 };
 
-static inline struct cdc_plane_state *
-to_cdc_plane_state(struct drm_plane_state *state)
+static inline struct cdc_plane_state
+*to_cdc_plane_state(struct drm_plane_state *state)
 {
 	return container_of(state, struct cdc_plane_state, state);
 }

@@ -16,34 +16,32 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_encoder_slave.h>
 
-
 struct cdc_device;
 struct cdc_hdmienc;
 struct cdc_lvdsenc;
 
-
 struct cdc_encoder {
-  struct drm_encoder_slave slave;
-  struct cdc_hdmienc       *hdmi;
-  struct cdc_lvdsenc       *lvds;
+	struct drm_encoder_slave slave;
+	struct cdc_hdmienc *hdmi;
+	struct cdc_lvdsenc *lvds;
 };
 
 #define to_cdc_encoder(e) \
         container_of(e, struct cdc_encoder, slave.base)
 #define cdc_encoder_to_drm_encoder(e)  (&(e)->slave.base)
 
-
 struct cdc_connector {
-  struct drm_connector connector;
-  struct cdc_encoder   *encoder;
-  struct cdc_device    *cdc;
+	struct drm_connector connector;
+	struct cdc_encoder *encoder;
+	struct cdc_device *cdc;
 };
 
 #define to_cdc_connector(c) \
         container_of(c, struct cdc_connector, connector)
 
-
-struct drm_encoder * cdc_connector_best_encoder(struct drm_connector *connector);
-int cdc_encoder_init(struct cdc_device *cdc, u32 enc_type, struct device_node * enc_node, struct device_node *con_node);
+struct drm_encoder * cdc_connector_best_encoder (
+	struct drm_connector *connector);
+int cdc_encoder_init (struct cdc_device *cdc, u32 enc_type,
+	struct device_node * enc_node, struct device_node *con_node);
 
 #endif
