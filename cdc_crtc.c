@@ -145,7 +145,8 @@ static void cdc_crtc_wait_page_flip (struct drm_crtc *crtc)
 	struct cdc_device *cdc = dev->dev_private;
 
 	if (wait_event_timeout(cdc->flip_wait,
-	    !cdc_crtc_page_flip_pending(crtc), msecs_to_jiffies(50)))
+			       !cdc_crtc_page_flip_pending(crtc),
+			       msecs_to_jiffies(50)))
 		return;
 
 	dev_warn(cdc->dev, "page flip timeout\n");
@@ -182,6 +183,9 @@ void cdc_crtc_stop (struct drm_crtc *crtc)
 		return;
 
 	cdc_crtc_wait_page_flip(crtc);
+
+	dev_dbg(cdc->dev, "%s: vblank off (crtc idx: %u, num_crtcs: %u)\n",
+		__func__, drm_crtc_index(crtc), crtc->dev->num_crtcs);
 	drm_crtc_vblank_off(crtc);
 
 	cdc_hw_setEnabled(cdc, false);
@@ -269,21 +273,11 @@ static void cdc_crtc_atomic_flush (struct drm_crtc *crtc,
 		 * We only have one CRTC, so index is 0.
 		 */
 		cdc_hw_triggerShadowReload(cdc, true);
-	//    drm_wait_one_vblank(crtc->dev, 0); // todo: uncomment after work again
+		drm_wait_one_vblank(crtc->dev, 0);
 	} else {
 		/* Reload immediately, since vblank is disabled */
 		cdc_hw_triggerShadowReload(cdc, false);
 	}
-}
-
-void cdc_crtc_destroy (struct drm_crtc * crtc)
-{
-	struct cdc_device *cdc = to_cdc_dev(crtc);
-
-	dev_dbg(cdc->dev, "%s (crtc: %p)\n", __func__, crtc);
-
-	cdc_crtc_disable(crtc);
-	drm_crtc_cleanup(crtc);
 }
 
 static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
@@ -296,7 +290,7 @@ static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
 
 static const struct drm_crtc_funcs crtc_funcs = {
 	.reset = drm_atomic_helper_crtc_reset,
-	.destroy = cdc_crtc_destroy,
+	.destroy = drm_crtc_cleanup,
 	.set_config = drm_atomic_helper_set_config,
 	.page_flip = drm_atomic_helper_page_flip,
 	.atomic_duplicate_state = drm_atomic_helper_crtc_duplicate_state,
@@ -309,7 +303,7 @@ void cdc_crtc_irq (struct drm_crtc *crtc)
 	struct cdc_device *cdc = to_cdc_dev(crtc);
 	struct drm_device *ddev = crtc->dev;
 
-	drm_handle_vblank(ddev, 0);
+	drm_crtc_handle_vblank(crtc);
 	cdc_crtc_finish_page_flip(crtc);
 
 	/* FIXME HACK for MesseDemo */
@@ -341,6 +335,8 @@ int cdc_crtc_create (struct cdc_device *cdc)
 	}
 
 	drm_crtc_helper_add(crtc, &crtc_helper_funcs);
+
+	/* Start with vertical blanking interrupt reporting disabled. */
 	drm_crtc_vblank_off(crtc);
 
 	return 0;

@@ -77,6 +77,13 @@ int cdc_encoder_init (struct cdc_device *cdc, u32 enc_type,
 
 	encoder = cdc_encoder_to_drm_encoder(enc);
 
+	/* CDC only has one CRTC. Since we allow only one output port for CDC,
+	 * there will be only one connected encoder.
+	 * possible_* has to be set before calling drm_encoder_init.
+	 */
+	encoder->possible_crtcs = 1;
+	encoder->possible_clones = 1;
+
 	if (enc_type == DRM_MODE_ENCODER_TMDS) {
 		ret = cdc_hdmienc_init(cdc, enc, enc_node);
 		if (ret < 0) {

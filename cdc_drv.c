@@ -49,14 +49,6 @@ static const struct of_device_id cdc_of_table[] = {
 
 MODULE_DEVICE_TABLE ( of, cdc_of_table);
 
-/* configuration dependent */
-static void cdc_init_dev (struct cdc_device *cdc)
-{
-	/* FIXME HACK for MesseDemo   */
-	spin_lock_init(&cdc->irq_slck);
-	init_waitqueue_head(&cdc->irq_waitq);
-}
-
 static void cdc_layer_init (struct cdc_device *cdc)
 {
 	int i;
@@ -70,33 +62,6 @@ static void cdc_layer_init (struct cdc_device *cdc)
 		cdc->planes[i].cdc = cdc;
 		cdc->planes[i].used = false;
 	}
-}
-
-static int cdc_unload (struct drm_device *dev)
-{
-	struct cdc_device *cdc = dev->dev_private;
-
-	dev_dbg(cdc->dev, "%s\n", __func__);
-
-	// Disable VBLANK in DRM subsystem and hardware
-	drm_crtc_vblank_off(&cdc->crtc);
-	cdc_crtc_set_vblank(cdc, false);
-
-	if (cdc->fbdev) {
-		drm_fbdev_cma_fini(cdc->fbdev);
-	}
-
-	drm_kms_helper_poll_fini(dev);
-	drm_mode_config_cleanup(dev);
-	drm_vblank_cleanup(dev);
-
-	dev->irq_enabled = 0;
-	dev->dev_private = NULL;
-
-	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
-	cdc_hw_setEnabled(cdc, false);
-
-	return 0;
 }
 
 static irqreturn_t cdc_irq (int irq, void *arg)
@@ -155,107 +120,11 @@ bool cdc_init_irq (struct cdc_device *cdc)
 	return true;
 }
 
-static int cdc_load (struct drm_device *dev, unsigned long flags)
-{
-	struct platform_device *pdev = dev->platformdev;
-	struct device_node *np = pdev->dev.of_node;
-	struct cdc_device *cdc;
-	struct resource *mem;
-	int ret = 0;
-
-	if (np == NULL) {
-		dev_err(dev->dev, "no platform data\n");
-		return -ENODEV;
-	}
-
-	cdc = devm_kzalloc(&pdev->dev, sizeof(*cdc), GFP_KERNEL);
-	if (cdc == NULL) {
-		dev_err(dev->dev, "failed to allocate driver data\n");
-		return -ENOMEM;
-	}
-
-	init_waitqueue_head(&cdc->commit.wait);
-
-	cdc->dev = &pdev->dev;
-	cdc->ddev = dev;
-	dev->dev_private = cdc;
-
-	cdc_init_dev(cdc);
-
-	cdc->pclk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(cdc->pclk)) {
-		dev_err(&pdev->dev, "failed to initialize pixel clock\n");
-		return PTR_ERR(cdc->pclk);
-	}
-
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	cdc->mmio = devm_ioremap_resource(&pdev->dev, mem);
-	dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start,
-		cdc->mmio);
-	if (IS_ERR(cdc->mmio)) {
-		return PTR_ERR(cdc->mmio);
-	}
-
-	cdc_crtc_set_vblank(cdc, false);
-	cdc->hw.enabled = false;
-	cdc->hw.irq_enabled = 0;
-
-	/* get the hw configuration */
-	{
-		cdc_hw_revision_t hwrev;
-		cdc_config1_t conf1;
-		cdc_config2_t conf2;
-		u32 layer_count;
-
-		hwrev.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_HW_REVISION);
-		layer_count = cdc_read_reg(cdc, CDC_REG_GLOBAL_LAYER_COUNT);
-		conf1.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG1);
-		conf2.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG2);
-
-		cdc->hw.layer_count = layer_count;
-		cdc->hw.shadow_regs = conf1.bits.m_shadow_regs;
-		cdc->hw.bus_width = 1 << conf2.bits.m_bus_width;
-
-		dev_info(dev->dev, "CDC HW ver. %u.%u (rev. %u):\n",
-			 hwrev.bits.m_major, hwrev.bits.m_minor,
-			 hwrev.bits.m_revision);
-		dev_info(dev->dev, "\tlayer count: %u\n", cdc->hw.layer_count);
-		dev_info(dev->dev, "\tbus width: %u byte\n", cdc->hw.bus_width);
-	}
-
-	cdc_layer_init(cdc);
-
-	cdc_hw_resetRegisters(cdc);
-
-	cdc_init_irq(cdc);
-
-	ret = drm_vblank_init(dev, 1);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to initialize vblank\n");
-		goto done;
-	}
-
-	ret = cdc_modeset_init(cdc);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to initialize CDC Modeset\n");
-		goto done;
-	}
-
-	dev->irq_enabled = 1;
-
-	platform_set_drvdata(pdev, cdc);
-
-	done: if (ret)
-		cdc_unload(dev);
-
-	return ret;
-}
-
 static void cdc_preclose (struct drm_device *dev, struct drm_file *file)
 {
 	struct cdc_device *cdc = dev->dev_private;
 
-	cdc_crtc_cancel_page_flip(&cdc->crtc, file);
+//	cdc_crtc_cancel_page_flip(&cdc->crtc, file);
 }
 
 static void
@@ -472,13 +341,13 @@ long cdc_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 
 		default:
-		printk(KERN_ERR "Unknown IOCTL (nr = %u)!\n", nr);
+			printk(KERN_ERR "Unknown IOCTL (nr = %u)!\n", nr);
+		}
+
+		return 0;
 	}
 
-	return 0;
-}
-
-return drm_ioctl(filp, cmd, arg);
+	return drm_ioctl(filp, cmd, arg);
 }
 
 static const struct file_operations cdc_fops = {
@@ -497,8 +366,6 @@ static const struct file_operations cdc_fops = {
 
 static struct drm_driver cdc_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_PRIME | DRIVER_ATOMIC,
-	.load = cdc_load,
-	.unload = cdc_unload,
 	.preclose = cdc_preclose,
 	.lastclose = cdc_lastclose,
 	.get_vblank_counter = drm_vblank_no_hw_counter,
@@ -558,16 +425,135 @@ static const struct dev_pm_ops cdc_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(cdc_pm_suspend, cdc_pm_resume)
 };
 
-static int cdc_probe (struct platform_device *pdev)
-{
-	return drm_platform_init(&cdc_driver, pdev);
-}
-
 static int cdc_remove (struct platform_device *pdev)
 {
 	struct cdc_device *cdc = platform_get_drvdata(pdev);
+	struct drm_device *ddev = cdc->ddev;
 
-	drm_put_dev(cdc->ddev);
+	drm_dev_unregister(ddev);
+
+	if (cdc->fbdev)
+		drm_fbdev_cma_fini(cdc->fbdev);
+
+	drm_kms_helper_poll_fini(ddev);
+	drm_mode_config_cleanup(ddev);
+
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
+	cdc_hw_setEnabled(cdc, false);
+
+	drm_dev_unref(ddev);
+
+	return 0;
+}
+
+static int cdc_probe (struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct cdc_device *cdc;
+	struct drm_device *ddev;
+	struct resource *mem;
+	int ret = 0;
+
+	if (np == NULL) {
+		dev_err(&pdev->dev, "no platform data\n");
+		return -ENODEV;
+	}
+
+	cdc = devm_kzalloc(&pdev->dev, sizeof(*cdc), GFP_KERNEL);
+	if (cdc == NULL) {
+		dev_err(&pdev->dev, "failed to allocate driver data\n");
+		return -ENOMEM;
+	}
+
+	init_waitqueue_head(&cdc->commit.wait);
+
+	/* FIXME HACK for MesseDemo   */
+	spin_lock_init(&cdc->irq_slck);
+	init_waitqueue_head(&cdc->irq_waitq);
+
+	cdc->dev = &pdev->dev;
+
+	platform_set_drvdata(pdev, cdc);
+
+	cdc->pclk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(cdc->pclk)) {
+		dev_err(&pdev->dev, "failed to initialize pixel clock\n");
+		return PTR_ERR(cdc->pclk);
+	}
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	cdc->mmio = devm_ioremap_resource(&pdev->dev, mem);
+	dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start,
+		cdc->mmio);
+	if (IS_ERR(cdc->mmio)) {
+		return PTR_ERR(cdc->mmio);
+	}
+
+	/* DRM/KMS objects */
+	ddev = drm_dev_alloc(&cdc_driver, &pdev->dev);
+	if (IS_ERR(ddev))
+		return PTR_ERR(ddev);
+
+	cdc->ddev = ddev;
+	ddev->dev_private = cdc;
+
+	cdc_crtc_set_vblank(cdc, false);
+	cdc->hw.enabled = false;
+	cdc->hw.irq_enabled = 0;
+
+	/* get the hw configuration */
+	{
+		cdc_hw_revision_t hwrev;
+		cdc_config1_t conf1;
+		cdc_config2_t conf2;
+		u32 layer_count;
+
+		hwrev.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_HW_REVISION);
+		layer_count = cdc_read_reg(cdc, CDC_REG_GLOBAL_LAYER_COUNT);
+		conf1.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG1);
+		conf2.m_data = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONFIG2);
+
+		cdc->hw.layer_count = layer_count;
+		cdc->hw.shadow_regs = conf1.bits.m_shadow_regs;
+		cdc->hw.bus_width = 1 << conf2.bits.m_bus_width;
+
+		dev_info(&pdev->dev, "CDC HW ver. %u.%u (rev. %u):\n",
+			 hwrev.bits.m_major, hwrev.bits.m_minor,
+			 hwrev.bits.m_revision);
+		dev_info(&pdev->dev, "\tlayer count: %u\n", cdc->hw.layer_count);
+		dev_info(&pdev->dev, "\tbus width: %u byte\n", cdc->hw.bus_width);
+	}
+
+	cdc_layer_init(cdc);
+
+	cdc_hw_resetRegisters(cdc);
+
+	cdc_init_irq(cdc);
+
+	ret = cdc_modeset_init(cdc);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to initialize CDC Modeset\n");
+		goto error;
+	}
+
+	ddev->irq_enabled = 1;
+
+
+
+	/* Register the DRM device with the core and the connectors with
+	 * sysfs.
+	 */
+	ret = drm_dev_register(ddev, 0);
+	if (ret)
+		goto error;
+
+	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
+
+	return 0;
+
+error:
+	cdc_remove(pdev);
+
 	return 0;
 }
 

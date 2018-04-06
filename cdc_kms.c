@@ -374,7 +374,7 @@ int cdc_modeset_init(struct cdc_device *cdc)
 {
 	struct drm_device *dev = cdc->ddev;
 	struct drm_fbdev_cma *fbdev;
-	struct drm_encoder *encoder;
+	int ret;
 
 	dev_dbg(cdc->dev, "%s\n", __func__);
 
@@ -386,19 +386,20 @@ int cdc_modeset_init(struct cdc_device *cdc)
 	dev->mode_config.max_height = CDC_MAX_HEIGHT;
 	dev->mode_config.funcs = &cdc_mode_config_funcs;
 
+	/* Initialize vertical blanking interrupts handling. Start with vblank
+	 * disabled for all CRTCs.
+	 */
+	ret = drm_vblank_init(dev, 1 /* num_crtcs */);
+	if (ret < 0) {
+		dev_err(cdc->dev, "failed to initialize vblank\n");
+		return ret;
+	}
+
 	cdc_planes_init(cdc);
 
 	cdc_crtc_create(cdc);
 
 	cdc_encoders_init(cdc);
-
-	/* CDC only has one CRTC. Since we allow only one output port for CDC,
-	 * there will be only one connected encoder.
-	 */
-	list_for_each_entry(encoder, &dev->mode_config.encoder_list, head) {
-		encoder->possible_crtcs = 1;
-		encoder->possible_clones = 1;
-	}
 
 	drm_mode_config_reset(dev);
 	drm_kms_helper_poll_init(dev);
