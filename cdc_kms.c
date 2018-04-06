@@ -219,6 +219,7 @@ static int cdc_atomic_commit(struct drm_device *dev,
   /* Swap the state, this is the point of no return. */
   drm_atomic_helper_swap_state(state, true);
 
+  drm_atomic_state_get(state);
   if(async)
     schedule_work(&commit->work);
   else
