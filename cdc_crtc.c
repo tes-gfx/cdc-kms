@@ -118,7 +118,7 @@ static void cdc_crtc_finish_page_flip (struct drm_crtc *crtc)
 		return;
 
 	spin_lock_irqsave(&dev->event_lock, flags);
-	drm_crtc_send_vblank_event(0, event);
+	drm_crtc_send_vblank_event(crtc, event);
 	wake_up(&cdc->flip_wait);
 	spin_unlock_irqrestore(&dev->event_lock, flags);
 
@@ -301,7 +301,6 @@ void cdc_crtc_irq (struct drm_crtc *crtc)
 {
 	unsigned long flags;
 	struct cdc_device *cdc = to_cdc_dev(crtc);
-	struct drm_device *ddev = crtc->dev;
 
 	drm_crtc_handle_vblank(crtc);
 	cdc_crtc_finish_page_flip(crtc);
