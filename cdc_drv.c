@@ -124,11 +124,10 @@ static void cdc_preclose (struct drm_device *dev, struct drm_file *file)
 {
 	struct cdc_device *cdc = dev->dev_private;
 
-//	cdc_crtc_cancel_page_flip(&cdc->crtc, file);
+	cdc_crtc_cancel_page_flip(&cdc->crtc, file);
 }
 
-static void
-cdc_lastclose (struct drm_device *dev)
+static void cdc_lastclose (struct drm_device *dev)
 {
 	struct cdc_device *cdc = dev->dev_private;
 
@@ -429,6 +428,12 @@ static int cdc_remove (struct platform_device *pdev)
 {
 	struct cdc_device *cdc = platform_get_drvdata(pdev);
 	struct drm_device *ddev = cdc->ddev;
+
+	/* Turn off vblank processing and irq */
+	drm_crtc_vblank_off(&cdc->crtc);
+
+	/* Turn off CRTC */
+	cdc_hw_setEnabled(cdc, false);
 
 	drm_dev_unregister(ddev);
 
