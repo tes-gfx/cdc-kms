@@ -120,13 +120,6 @@ bool cdc_init_irq (struct cdc_device *cdc)
 	return true;
 }
 
-static void cdc_preclose (struct drm_device *dev, struct drm_file *file)
-{
-	struct cdc_device *cdc = dev->dev_private;
-
-	cdc_crtc_cancel_page_flip(&cdc->crtc, file);
-}
-
 static void cdc_lastclose (struct drm_device *dev)
 {
 	struct cdc_device *cdc = dev->dev_private;
@@ -365,7 +358,6 @@ static const struct file_operations cdc_fops = {
 
 static struct drm_driver cdc_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_PRIME | DRIVER_ATOMIC,
-	.preclose = cdc_preclose,
 	.lastclose = cdc_lastclose,
 	.get_vblank_counter = drm_vblank_no_hw_counter,
 	.enable_vblank = cdc_enable_vblank,
