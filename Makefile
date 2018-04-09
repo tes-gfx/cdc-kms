@@ -26,4 +26,4 @@ clean:
 
 .PHONY:
 deploy: all
-	scp *.ko root@$(BOARD_IP):/lib/modules/4.1.22-ltsi-altera/extra/
+	scp *.ko root@$(BOARD_IP):/lib/modules/4.9.78-ltsi-altera/extra/
