@@ -324,10 +324,12 @@ long cdc_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 		case 0xe3: {
 			unsigned long flags;
 
+			drm_crtc_vblank_get(&cdc->crtc);
 			spin_lock_irqsave(&cdc->irq_slck, flags);
 			cdc->irq_stat = 0;
 			spin_unlock_irqrestore(&cdc->irq_slck, flags);
 			wait_event_interruptible(cdc->irq_waitq, cdc->irq_stat);
+			drm_crtc_vblank_put(&cdc->crtc);
 
 			break;
 		}
