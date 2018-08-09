@@ -15,6 +15,7 @@
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
@@ -487,6 +488,19 @@ static int cdc_probe (struct platform_device *pdev)
 	if (IS_ERR(cdc->mmio)) {
 		return PTR_ERR(cdc->mmio);
 	}
+
+	np = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+	if (np) {
+		dev_err(&pdev->dev, "Using reserved memory as CMA pool\n");
+		ret = of_reserved_mem_device_init(&pdev->dev);
+		if(ret) {
+			dev_err(&pdev->dev, "Could not get reserved memory\n");
+			return ret;
+		}
+		of_node_put(np);
+	}
+	else
+		dev_err(&pdev->dev, "Using default CMA pool\n");
 
 	/* DRM/KMS objects */
 	ddev = drm_dev_alloc(&cdc_driver, &pdev->dev);
