@@ -53,23 +53,24 @@
 // per layer registers
 #define CDC_REG_LAYER_CONFIG_1                     0x00
 #define CDC_REG_LAYER_CONFIG_2                     0x01
-#define CDC_REG_LAYER_CONTROL                      0x02
-#define CDC_REG_LAYER_WINDOW_H                     0x03
-#define CDC_REG_LAYER_WINDOW_V                     0x04
-#define CDC_REG_LAYER_COLOR_KEY                    0x05
-#define CDC_REG_LAYER_PIXEL_FORMAT                 0x06
-#define CDC_REG_LAYER_ALPHA                        0x07
-#define CDC_REG_LAYER_COLOR                        0x08
-#define CDC_REG_LAYER_BLENDING                     0x09
-#define CDC_REG_LAYER_FB_BUS_CONTROL               0x0a
-#define CDC_REG_LAYER_AUX_FB_CONTROL               0x0b
-#define CDC_REG_LAYER_CB_START                     0x0c
-#define CDC_REG_LAYER_CB_LENGTH                    0x0d
-#define CDC_REG_LAYER_FB_LINES                     0x0e
-#define CDC_REG_LAYER_AUX_FB_START                 0x0f
-#define CDC_REG_LAYER_AUX_FB_LENGTH                0x10
-#define CDC_REG_LAYER_AUX_FB_LINES                 0x11
-#define CDC_REG_LAYER_CLUT                         0x12
+#define CDC_REG_LAYER_RELOAD                       0x02
+#define CDC_REG_LAYER_CONTROL                      0x03
+#define CDC_REG_LAYER_WINDOW_H                     0x04
+#define CDC_REG_LAYER_WINDOW_V                     0x05
+#define CDC_REG_LAYER_COLOR_KEY                    0x06
+#define CDC_REG_LAYER_PIXEL_FORMAT                 0x07
+#define CDC_REG_LAYER_ALPHA                        0x08
+#define CDC_REG_LAYER_COLOR                        0x09
+#define CDC_REG_LAYER_BLENDING                     0x0a
+#define CDC_REG_LAYER_FB_BUS_CONTROL               0x0b
+#define CDC_REG_LAYER_AUX_FB_CONTROL               0x0c
+#define CDC_REG_LAYER_CB_START                     0x0d
+#define CDC_REG_LAYER_CB_LENGTH                    0x0e
+#define CDC_REG_LAYER_FB_LINES                     0x0f
+#define CDC_REG_LAYER_AUX_FB_START                 0x10
+#define CDC_REG_LAYER_AUX_FB_LENGTH                0x11
+#define CDC_REG_LAYER_AUX_FB_LINES                 0x12
+#define CDC_REG_LAYER_CLUT                         0x13
 
 #define CDC_REG_LAYER_SCALER_INPUT_SIZE            0x13
 #define CDC_REG_LAYER_SCALER_OUTPUT_SIZE           0x14
@@ -150,21 +151,26 @@ typedef union {
  *  IRQ type (see <cdc_registerISR>)
  *
  *  CDC_IRQ_LINE                   - Programmable Scanline Interrupt
- *  CDC_IRQ_FIFO_UNDERRUN          - Indicates a fifo underrun
+ *  CDC_IRQ_FIFO_UNDERRUN_WARN     - Indicates a possible upcoming fifo underrun
  *  CDC_IRQ_BUS_ERROR              - Indicates a bus error
  *  CDC_IRQ_RELOAD                 - Issued on every shadow reload
  *  CDC_IRQ_SLAVE_TIMING_NO_SIGNAL - Issued if slave timing mode is enabled, but
  *                                   no signal is detected
  *  CDC_IRQ_SLAVE_TIMING_NO_SYNC   - Issued if slave timing mode is enabled, but
- *                                   CDC is currently not in sync with external sync source
+ *                                   CDC is currently not in sync with external
+ *                                   sync source
+ *  CDC_IRQ_FIFO_UNDERRUN          - Indicates a fifo underrun
+ *  CDC_IRQ_CRC_ERROR              - Indicates CRC mismatch of the frame
  */
 typedef enum {
 	CDC_IRQ_LINE = 0x01,
-	CDC_IRQ_FIFO_UNDERRUN = 0x02,
+	CDC_IRQ_FIFO_UNDERRUN_WARN = 0x02,
 	CDC_IRQ_BUS_ERROR = 0x04,
 	CDC_IRQ_RELOAD = 0x08,
 	CDC_IRQ_SLAVE_TIMING_NO_SIGNAL = 0x10,
 	CDC_IRQ_SLAVE_TIMING_NO_SYNC = 0x20,
+	CDC_IRQ_FIFO_UNDERRUN = 0x40,
+	CDC_IRQ_CRC_ERROR = 0x80,
 } cdc_irq_type;
 
 /*--------------------------------------------------------------------------

@@ -21,7 +21,7 @@
 #define CDC_MAX_WIDTH  2047u
 #define CDC_MAX_HEIGHT 2047u
 #define CDC_MAX_PITCH  8192u
-#define CDC_OFFSET_LAYER 0x20
+#define CDC_OFFSET_LAYER 0x40
 
 struct cdc_device;
 struct cdc_format;
