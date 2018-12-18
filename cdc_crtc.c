@@ -206,8 +206,11 @@ static void cdc_crtc_enable (struct drm_crtc *crtc)
 
 	cdc_crtc_start(crtc);
 
-	/* Reenable underrun IRQ. It was maybe disabled to prevent message flooding. */
+	/* Reenable underrun and CRC IRQs. It was maybe disabled to prevent
+	 * message flooding. */
 	cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, true);
+	cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN_WARN, true);
+	cdc_irq_set(cdc, CDC_IRQ_CRC_ERROR, true);
 
 	/* Enable line IRQ together with CRTC */
 	cdc_irq_set(cdc, CDC_IRQ_LINE, true);
@@ -226,6 +229,9 @@ static void cdc_crtc_disable (struct drm_crtc *crtc)
 	cdc_crtc_stop(crtc);
 
 	cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
+	cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN_WARN, false);
+	cdc_irq_set(cdc, CDC_IRQ_CRC_ERROR, false);
+
 	cdc_irq_set(cdc, CDC_IRQ_LINE, false);
 }
 ;

@@ -79,17 +79,29 @@ static irqreturn_t cdc_irq (int irq, void *arg)
 	if (status & CDC_IRQ_BUS_ERROR) {
 		dev_err_ratelimited(cdc->dev, "BUS error IRQ triggered\n");
 	}
-	if (status & CDC_IRQ_FIFO_UNDERRUN) {
+	if (status & CDC_IRQ_FIFO_UNDERRUN_WARN) {
 		// disable underrun IRQ to prevent IRQ flooding
-		cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
+		cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN_WARN, false);
 
-		dev_err_ratelimited(cdc->dev, "FIFO underrun\n");
+		dev_err_ratelimited(cdc->dev, "FIFO underrun warn\n");
 	}
 	if (status & CDC_IRQ_SLAVE_TIMING_NO_SIGNAL) {
 		dev_err_ratelimited(cdc->dev, "SLAVE no signal\n");
 	}
 	if (status & CDC_IRQ_SLAVE_TIMING_NO_SYNC) {
 		dev_err_ratelimited(cdc->dev, "SLAVE no sync\n");
+	}
+	if (status & CDC_IRQ_FIFO_UNDERRUN) {
+		// disable underrun IRQ to prevent IRQ flooding
+		cdc_irq_set(cdc, CDC_IRQ_FIFO_UNDERRUN, false);
+
+		dev_err_ratelimited(cdc->dev, "FIFO underrun\n");
+	}
+	if (status & CDC_IRQ_CRC_ERROR) {
+		// disable underrun IRQ to prevent IRQ flooding
+		cdc_irq_set(cdc, CDC_IRQ_CRC_ERROR, false);
+
+		dev_err_ratelimited(cdc->dev, "CRC error\n");
 	}
 
 	return IRQ_HANDLED;
