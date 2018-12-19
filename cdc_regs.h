@@ -64,8 +64,8 @@
 #define CDC_REG_LAYER_BLENDING                     0x0a
 #define CDC_REG_LAYER_FB_BUS_CONTROL               0x0b
 #define CDC_REG_LAYER_AUX_FB_CONTROL               0x0c
-#define CDC_REG_LAYER_CB_START                     0x0d
-#define CDC_REG_LAYER_CB_LENGTH                    0x0e
+#define CDC_REG_LAYER_FB_START                     0x0d
+#define CDC_REG_LAYER_FB_LENGTH                    0x0e
 #define CDC_REG_LAYER_FB_LINES                     0x0f
 #define CDC_REG_LAYER_AUX_FB_START                 0x10
 #define CDC_REG_LAYER_AUX_FB_LENGTH                0x11

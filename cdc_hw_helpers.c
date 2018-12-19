@@ -62,7 +62,7 @@ static void updateBufferLength (struct cdc_device *cdc, int layer)
 	if (pitch == 0)
 		pitch = length;
 	length += cdc->hw.bus_width - 1; // add bus_width_in_bits - 1
-	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_CB_LENGTH,
+	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_FB_LENGTH,
 		(((u32) pitch) << 16) | length);
 }
 
@@ -122,7 +122,7 @@ void cdc_hw_setWindow (struct cdc_device *cdc, int layer, u16 startX,
 void cdc_hw_setCBAddress (struct cdc_device *cdc, int layer, dma_addr_t address)
 {
 	//TODO: check address alignment
-	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_CB_START, address);
+	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_FB_START, address);
 }
 
 void cdc_hw_layer_setEnabled (struct cdc_device *cdc, int layer, bool enable)
@@ -188,7 +188,7 @@ void cdc_hw_resetRegisters (struct cdc_device *cdc)
 				| CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA_INV);
 		cdc_write_layer_reg(cdc, i, CDC_REG_LAYER_AUX_FB_CONTROL, 0);
 //    cdc->planes[i].AuxFB_control = 0;
-		cdc_write_layer_reg(cdc, i, CDC_REG_LAYER_CB_START, 0);
+		cdc_write_layer_reg(cdc, i, CDC_REG_LAYER_FB_START, 0);
 		cdc_write_layer_reg(cdc, i, CDC_REG_LAYER_FB_LINES,
 			v_width_accum - v_b_porch_accum);
 		cdc->planes[i].fb_pitch = 0;
