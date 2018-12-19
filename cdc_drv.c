@@ -121,7 +121,7 @@ bool cdc_init_irq (struct cdc_device *cdc)
 	}
 
 	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, cdc->hw.irq_enabled);
-	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0x1f);
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_CLEAR, 0xff);
 
 	ret = devm_request_irq(cdc->dev, irq, cdc_irq, 0, dev_name(cdc->dev),
 		cdc);
