@@ -177,14 +177,14 @@ static int cdc_regs_show(struct seq_file *m, void *arg)
 	pm_runtime_get_sync(dev->dev);
 
 	/* Show the first few registers */
-	for(i=0; i<(0x20 + 0x20*cdc->hw.layer_count); i += 4)
+	for(i=0; i<(CDC_LAYER_SPAN + CDC_LAYER_SPAN * cdc->hw.layer_count); i += 4)
 	{
 		u32 reg = cdc_read_reg(cdc, i);
 
 		if(i == 0)
 			seq_printf(m, "Global:\n");
-		else if(i % 0x20 == 0)
-			seq_printf(m, "Layer %d:\n", i / 0x20);
+		else if(i % CDC_LAYER_SPAN == 0)
+			seq_printf(m, "Layer %d:\n", i / CDC_LAYER_SPAN);
 
 		seq_printf(m, "%03x: %08x", i * 4, reg);
 		reg = cdc_read_reg(cdc, i+1);

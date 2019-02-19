@@ -50,6 +50,9 @@
 #define CDC_REG_GLOBAL_CONTROL_DITHERING        0x00010000u
 #define CDC_REG_GLOBAL_CONTROL_ENABLE           0x00000001u
 
+// Layer span (in words)
+#define CDC_LAYER_SPAN 0x40
+
 // per layer registers
 #define CDC_REG_LAYER_CONFIG_1                     0x00
 #define CDC_REG_LAYER_CONFIG_2                     0x01
