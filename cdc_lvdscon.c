@@ -91,7 +91,6 @@ static enum drm_connector_status cdc_lvds_connector_detect(
 }
 
 static const struct drm_connector_funcs connector_funcs = {
-	.dpms = drm_atomic_helper_connector_dpms,
 	.reset = drm_atomic_helper_connector_reset,
 	.detect = cdc_lvds_connector_detect,
 	.fill_modes = drm_helper_probe_single_connector_modes,
@@ -162,10 +161,6 @@ int cdc_lvds_connector_init(struct cdc_device *cdc, struct cdc_encoder *enc,
 			ret);
 		return ret;
 	}
-
-	connector->dpms = DRM_MODE_DPMS_OFF;
-	drm_object_property_set_value(&connector->base,
-		cdc->ddev->mode_config.dpms_property, DRM_MODE_DPMS_OFF);
 
 	ret = drm_mode_connector_attach_encoder(connector, encoder);
 	if (ret < 0) {

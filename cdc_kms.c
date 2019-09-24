@@ -211,7 +211,11 @@ static int cdc_atomic_commit(struct drm_device *dev,
 	}
 
 	/* Swap the state, this is the point of no return. */
-	drm_atomic_helper_swap_state(state, true);
+	ret = drm_atomic_helper_swap_state(state, true);
+	if (ret) {
+		kfree(commit);
+		return ret;
+	}
 
 	drm_atomic_state_get(state);
 	if (async)
@@ -406,7 +410,7 @@ int cdc_modeset_init(struct cdc_device *cdc)
 
 	if (dev->mode_config.num_connector) {
 		dev_dbg(cdc->dev, "Initializing FBDEV CMA...\n");
-		fbdev = drm_fbdev_cma_init(dev, 32, 1, 1);
+		fbdev = drm_fbdev_cma_init(dev, 32, 1);
 		dev_dbg(cdc->dev, "Finished FBDEV CMA init call\n");
 		if (IS_ERR(fbdev)) {
 			dev_err(cdc->dev,

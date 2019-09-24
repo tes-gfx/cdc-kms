@@ -239,7 +239,11 @@ static int cdc_mm_show(struct seq_file *m, void *arg)
 {
 	struct drm_info_node *node = (struct drm_info_node *) m->private;
 	struct drm_device *dev = node->minor->dev;
-	return drm_mm_dump_table(m, &dev->vma_offset_manager->vm_addr_space_mm);
+	struct drm_printer p = drm_seq_file_printer(m);
+
+	drm_mm_print(&dev->vma_offset_manager->vm_addr_space_mm, &p);
+
+	return 0;
 }
 
 static struct drm_info_list cdc_debugfs_list[] = {
@@ -264,12 +268,6 @@ static int cdc_debugfs_init(struct drm_minor *minor)
 	}
 
 	return ret;
-}
-
-static void cdc_debugfs_cleanup(struct drm_minor *minor)
-{
-	drm_debugfs_remove_files(cdc_debugfs_list,
-		ARRAY_SIZE(cdc_debugfs_list), minor);
 }
 #endif
 
@@ -374,7 +372,6 @@ static const struct file_operations cdc_fops = {
 static struct drm_driver cdc_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_PRIME | DRIVER_ATOMIC,
 	.lastclose = cdc_lastclose,
-	.get_vblank_counter = drm_vblank_no_hw_counter,
 	.enable_vblank = cdc_enable_vblank,
 	.disable_vblank = cdc_disable_vblank,
 	.gem_free_object = drm_gem_cma_free_object,
@@ -389,16 +386,15 @@ static struct drm_driver cdc_driver = {
 	.gem_prime_mmap = drm_gem_cma_prime_mmap,
 	.gem_vm_ops = &drm_gem_cma_vm_ops,
 	.dumb_create = cdc_gem_cma_dumb_create,
-	.dumb_map_offset = drm_gem_cma_dumb_map_offset,
+	.dumb_map_offset = drm_gem_dumb_map_offset,
 	.dumb_destroy = drm_gem_dumb_destroy,
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_init = cdc_debugfs_init,
-	.debugfs_cleanup = cdc_debugfs_cleanup,
 #endif
 	.fops = &cdc_fops,
 	.name = "tes-cdc",
 	.desc = "TES CDC Display Controller",
-	.date = "20170309",
+	.date = "20190902",
 	.major = 1,
 	.minor = 0,
 };

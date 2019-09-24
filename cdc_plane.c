@@ -37,7 +37,7 @@ void cdc_plane_setup_fb(struct cdc_plane *plane)
 	unsigned int byte_offset;
 
 	byte_offset = (plane->plane.state->src_y >> 16) * fb->pitches[0]
-		+ (plane->plane.state->src_x >> 16) * (fb->bits_per_pixel / 8);
+		+ (plane->plane.state->src_x >> 16) * (fb->format->cpp[0] * 8);
 	gem = drm_fb_cma_get_gem_obj(fb, 0);
 	cdc_hw_setCBAddress(cdc, layer,
 		gem->paddr + fb->offsets[0] + byte_offset);
@@ -120,11 +120,11 @@ static void cdc_plane_atomic_update(struct drm_plane *plane,
 		/* plane setup */
 		/* todo: find out what to change and only change that, like with the window */
 		cdc_hw_setPixelFormat(cdc, layer,
-			cdc_format_info(new_state->fb->pixel_format)->cdc_hw_format);
+			cdc_format_info(new_state->fb->format->format)->cdc_hw_format);
 
 		// note: in the CDC default config, only CONS_ALPHA(_INV) and ALPHA_X_CONST_ALPHA(_INV) are available
 		if ((layer != 0)
-			&& (new_state->fb->pixel_format != DRM_FORMAT_XRGB8888)) {
+			&& (new_state->fb->format->format != DRM_FORMAT_XRGB8888)) {
 			// Enable pixel alpha for overlay layers only
 			cdc_hw_setBlendMode(cdc, layer,
 				CDC_BLEND_PIXEL_ALPHA_X_CONST_ALPHA,
@@ -239,7 +239,6 @@ static const struct drm_plane_funcs cdc_plane_funcs = {
 	.update_plane = drm_atomic_helper_update_plane,
 	.disable_plane = drm_atomic_helper_disable_plane,
 	.destroy = drm_plane_cleanup,
-	.set_property = drm_atomic_helper_plane_set_property,
 	.atomic_set_property = cdc_plane_atomic_set_property,
 	.atomic_get_property = cdc_plane_atomic_get_property,
 	.reset = cdc_plane_reset,
@@ -281,8 +280,8 @@ int cdc_planes_init(struct cdc_device *cdc)
 		dev_dbg(cdc->dev, "Initializing plane %d as %d type...\n", i, type);
 		ret = drm_universal_plane_init(cdc->ddev, &plane->plane, 1,
 			&cdc_plane_funcs, cdc_supported_formats,
-			ARRAY_SIZE(cdc_supported_formats), type,
-			NULL);
+			ARRAY_SIZE(cdc_supported_formats), NULL,
+			type, NULL);
 		if (ret < 0) {
 			dev_err(cdc->dev, "could not initialize plane %d...\n", i);
 			return ret;

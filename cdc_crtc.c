@@ -195,7 +195,7 @@ void cdc_crtc_stop (struct drm_crtc *crtc)
  * drm_crtc_funcs
  */
 
-static void cdc_crtc_enable (struct drm_crtc *crtc)
+static void cdc_crtc_enable (struct drm_crtc *crtc, struct drm_crtc_state *old_crtc_state)
 {
 	struct cdc_device *cdc = to_cdc_dev(crtc);
 
@@ -287,7 +287,7 @@ static void cdc_crtc_atomic_flush (struct drm_crtc *crtc,
 }
 
 static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
-	.enable = cdc_crtc_enable,
+	.atomic_enable = cdc_crtc_enable,
 	.disable = cdc_crtc_disable,
 	.mode_fixup = cdc_crtc_mode_fixup,
 	.atomic_begin = cdc_crtc_atomic_begin,
