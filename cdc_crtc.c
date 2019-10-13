@@ -286,10 +286,20 @@ static void cdc_crtc_atomic_flush (struct drm_crtc *crtc,
 	}
 }
 
+enum drm_mode_status cdc_crtc_mode_valid(struct drm_crtc *crtc,
+	const struct drm_display_mode *mode) {
+
+	if(mode->clock != 108000)
+		return MODE_NOCLOCK;
+
+	return MODE_OK;
+}
+
 static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
 	.atomic_enable = cdc_crtc_enable,
 	.disable = cdc_crtc_disable,
 	.mode_fixup = cdc_crtc_mode_fixup,
+	.mode_valid = cdc_crtc_mode_valid,
 	.atomic_begin = cdc_crtc_atomic_begin,
 	.atomic_flush = cdc_crtc_atomic_flush,
 };

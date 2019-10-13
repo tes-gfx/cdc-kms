@@ -236,14 +236,6 @@ static const struct drm_mode_config_funcs cdc_mode_config_funcs = {
 static int cdc_encoders_find_and_init(struct cdc_device *cdc,
 	struct of_endpoint *ep)
 {
-	static const struct {
-		const char *compatible;
-		__u32 type;
-	} encoders[] = {
-		{ "adi,adv7513", DRM_MODE_ENCODER_TMDS },
-		{ "lvds-encoder", DRM_MODE_ENCODER_LVDS },
-	};
-
 	__u32 enc_type = DRM_MODE_ENCODER_NONE;
 	struct device_node *connector = NULL;
 	struct device_node *encoder = NULL;
@@ -262,10 +254,17 @@ static int cdc_encoders_find_and_init(struct cdc_device *cdc,
 			ep->local_node->full_name);
 		return -ENODEV;
 	}
-
+	
+	if (!of_device_is_available(entity)) {
+		dev_dbg(cdc->dev,
+			"connected entity %pOF is disabled, skipping\n",
+			entity);
+		return -ENODEV;
+	}
+	
 	dev_dbg(cdc->dev, "endpoint is connected to %s\n", entity->full_name);
 
-	entity_ep_node = of_parse_phandle(ep->local_node, "remote-endpoint", 0);
+	entity_ep_node = of_graph_get_remote_endpoint(ep->local_node);
 
 	for_each_endpoint_of_node(entity, ep_node)
 	{
@@ -294,31 +293,7 @@ static int cdc_encoders_find_and_init(struct cdc_device *cdc,
 
 	of_node_put(entity_ep_node);
 
-	if (encoder) {
-		unsigned int i;
-		dev_dbg(cdc->dev, "found encoder %s\n", encoder->full_name);
-		/*
-		 * If an encoder has been found, get its type based on its
-		 * compatible string.
-		 */
-
-		for (i = 0; i < ARRAY_SIZE(encoders); ++i) {
-			if (of_device_is_compatible(encoder,
-				encoders[i].compatible)) {
-				enc_type = encoders[i].type;
-				break;
-			}
-		}
-
-		if (i == ARRAY_SIZE(encoders)) {
-			dev_warn(cdc->dev,
-				"unknown encoder type for %s, skipping\n",
-				encoder->full_name);
-			of_node_put(encoder);
-			of_node_put(connector);
-			return -EINVAL;
-		}
-	} else {
+	if (!encoder) {
 		/*
 		 * If no encoder has been found the entity must be the
 		 * connector.

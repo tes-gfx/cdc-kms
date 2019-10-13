@@ -69,6 +69,7 @@ int cdc_encoder_init (struct cdc_device *cdc, u32 enc_type,
 {
 	struct cdc_encoder *enc;
 	struct drm_encoder *encoder;
+	struct drm_bridge *bridge = NULL;
 	int ret = 0;
 
 	enc = devm_kzalloc(cdc->dev, sizeof(*enc), GFP_KERNEL);
@@ -77,52 +78,62 @@ int cdc_encoder_init (struct cdc_device *cdc, u32 enc_type,
 
 	encoder = cdc_encoder_to_drm_encoder(enc);
 
-	/* CDC only has one CRTC. Since we allow only one output port for CDC,
-	 * there will be only one connected encoder.
-	 * possible_* has to be set before calling drm_encoder_init.
-	 */
-	encoder->possible_crtcs = 1;
-	encoder->possible_clones = 1;
+	if (enc_node) {
+		dev_dbg(cdc->dev, "initializing encoder %pOF for output %u\n",
+			enc_node, enc_type);
 
-	if (enc_type == DRM_MODE_ENCODER_TMDS) {
-		ret = cdc_hdmienc_init(cdc, enc, enc_node);
-		if (ret < 0) {
-			dev_err(cdc->dev,
-				"Error initializing HDMI drm_encoder: %d\n",
-				ret);
+		/* Locate the DRM bridge from the encoder DT node. */
+		bridge = of_drm_find_bridge(enc_node);
+		if (!bridge) {
+			dev_err(cdc->dev, "could not find bridge for %pOF\n",
+				enc_node);
+			ret = -EPROBE_DEFER;
 			goto done;
+		}
+
+		dev_dbg(cdc->dev, "found bridge %pOF for encoder %pOF\n",
+			bridge->of_node, enc_node);
+	} else {
+		dev_dbg(cdc->dev,
+			"initializing internal encoder for output %u\n",
+			enc_type);
+	}
+
+	encoder->possible_crtcs = 1;
+	encoder->possible_clones = 0;
+
+	ret = drm_encoder_init(cdc->ddev, encoder, &encoder_funcs,
+			       DRM_MODE_ENCODER_NONE, NULL);
+	if (ret < 0)
+		goto done;
+
+	dev_dbg(cdc->dev, "initialized encoder %s\n", encoder->name);
+	drm_encoder_helper_add(encoder, &encoder_helper_funcs);
+
+	if (bridge) {
+		/*
+		 * Attach the bridge to the encoder. The bridge will create the
+		 * connector.
+		 */
+		ret = drm_bridge_attach(encoder, bridge, NULL);
+		if (ret) {
+			dev_err(cdc->dev, "could not attach bridge to encoder (err=%d)\n", ret);
+			drm_encoder_cleanup(encoder);
+			return ret;
 		}
 	} else {
-		ret = drm_encoder_init(cdc->ddev, encoder, &encoder_funcs,
-			enc_type, NULL);
-		if (ret < 0) {
-			dev_err(cdc->dev,
-				"Error initializing LVDS drm_encoder: %d\n",
-				ret);
-			goto done;
-		}
-
-		drm_encoder_helper_add(encoder, &encoder_helper_funcs);
+		/* There's no bridge, create the connector manually. */
+		ret = cdc_lvds_connector_init(cdc, enc, con_node);
 	}
 
-	switch (enc_type) {
-	case DRM_MODE_ENCODER_LVDS:
-		dev_dbg(cdc->dev, "Initializing LVDS connector...\n");
-		ret = cdc_lvds_connector_init(cdc, enc, enc_node);
-		break;
-	case DRM_MODE_ENCODER_TMDS:
-		dev_dbg(cdc->dev, "Initializing HDMI connector...\n");
-		ret = cdc_hdmi_connector_init(cdc, enc);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	done: if (ret < 0) {
+done:
+	if (ret < 0) {
+		dev_err(cdc->dev, "could not initialize encoder %pOF\n",
+			enc_node);
 		if (encoder->name)
 			encoder->funcs->destroy(encoder);
-		devm_kfree(cdc->dev, encoder);
+		devm_kfree(cdc->dev, enc);
 	}
+
 	return ret;
 }
