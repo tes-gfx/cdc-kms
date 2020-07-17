@@ -460,6 +460,7 @@ static int cdc_probe (struct platform_device *pdev)
 	struct cdc_device *cdc;
 	struct drm_device *ddev;
 	struct resource *mem;
+	int max_clock;
 	int ret = 0;
 
 	if (np == NULL) {
@@ -495,6 +496,14 @@ static int cdc_probe (struct platform_device *pdev)
 		cdc->mmio);
 	if (IS_ERR(cdc->mmio)) {
 		return PTR_ERR(cdc->mmio);
+	}
+
+	if(of_property_read_s32(pdev->dev.of_node, "max-clock-frequency", &max_clock)) {
+		cdc->max_clock_khz = 0;
+	}
+	else {
+		cdc->max_clock_khz = max_clock / 1000; // Hz to kHz
+		dev_dbg(&pdev->dev, "Set max pixel clock frequency to %d\n", cdc->max_clock_khz);
 	}
 
 	np = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);

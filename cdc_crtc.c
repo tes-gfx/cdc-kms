@@ -287,10 +287,14 @@ static void cdc_crtc_atomic_flush (struct drm_crtc *crtc,
 }
 
 enum drm_mode_status cdc_crtc_mode_valid(struct drm_crtc *crtc,
-	const struct drm_display_mode *mode) {
+	const struct drm_display_mode *mode)
+{
+	struct cdc_device *cdc = to_cdc_dev(crtc);
 
-	if(mode->clock != 108000)
-		return MODE_NOCLOCK;
+	if(cdc->max_clock_khz) {
+		if(mode->clock > cdc->max_clock_khz)
+			return MODE_NOCLOCK;
+	}
 
 	return MODE_OK;
 }

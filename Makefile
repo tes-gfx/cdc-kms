@@ -9,7 +9,7 @@ cdc-y := cdc_drv.o \
          cdc_encoder.o \
          cdc_hw.o \
          cdc_hw_helpers.o 
-ccflags-y := -DDISABLE_ASSERTIONS
+ccflags-y += -DDISABLE_ASSERTIONS
 
 SRC := $(shell pwd)
 
@@ -26,4 +26,4 @@ clean:
 
 .PHONY:
 deploy: all
-	scp *.ko root@$(BOARD_IP):/lib/modules/4.14.73-ltsi-altera/extra/
+	scp *.ko root@$(BOARD_IP):/lib/modules/4.14.130-ltsi-altera/extra/

@@ -70,6 +70,8 @@ struct cdc_device {
 	struct drm_fbdev_cma *fbdev;
 	struct cdc_plane *planes;
 
+	int max_clock_khz; // max pixel clock frequency in kHz
+
 	int dpms;
 	bool wait_for_vblank;
 	bool early_poll; // did a poll occur before FBDEV was setup?
