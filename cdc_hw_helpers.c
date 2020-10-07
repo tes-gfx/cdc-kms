@@ -71,12 +71,19 @@ static void setEnabled (struct cdc_device *cdc, bool enable)
 	u32 control;
 
 	control = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONTROL);
+
 	if (enable)
-		cdc_write_reg(cdc, CDC_REG_GLOBAL_CONTROL,
-			control | CDC_REG_GLOBAL_CONTROL_ENABLE);
+		control |= CDC_REG_GLOBAL_CONTROL_ENABLE
+			   | CDC_REG_GLOBAL_CONTROL_STREAM_ENABLE;
 	else
-		cdc_write_reg(cdc, CDC_REG_GLOBAL_CONTROL,
-			control & ~CDC_REG_GLOBAL_CONTROL_ENABLE);
+		control &= ~CDC_REG_GLOBAL_CONTROL_ENABLE;
+
+	if(cdc->dswz) {
+		//control |= CDC_REG_GLOBAL_CONTROL_STREAM_ENABLE;
+		dswz_set_mode(cdc->dswz, DSWZ_MODE_TEST);
+	}
+
+	cdc_write_reg(cdc, CDC_REG_GLOBAL_CONTROL,control);
 }
 
 void cdc_hw_setPixelFormat (struct cdc_device *cdc, int layer, u8 format)
@@ -117,12 +124,22 @@ void cdc_hw_setWindow (struct cdc_device *cdc, int layer, u16 startX,
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_FB_LINES, height);
 
 	updateBufferLength(cdc, layer);
+
+	if(cdc->dswz) {
+		u8 format_bpp;
+
+		format_bpp = cdc_formats_bpp[cdc->planes[layer].pixel_format];
+		dswz_set_fb_config(cdc->dswz, width, height, pitch, format_bpp);
+	}
 }
 
 void cdc_hw_setCBAddress (struct cdc_device *cdc, int layer, dma_addr_t address)
 {
 	//TODO: check address alignment
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_FB_START, address);
+	if(cdc->dswz) {
+		dswz_set_fb_addr(cdc->dswz, address);
+	}
 }
 
 void cdc_hw_layer_setEnabled (struct cdc_device *cdc, int layer, bool enable)

@@ -33,8 +33,11 @@
 #include "cdc_drv.h"
 #include "cdc_kms.h"
 #include "cdc_crtc.h"
+#include "cdc_deswizzle.h"
 #include "cdc_hw.h"
 #include "cdc_hw_helpers.h"
+
+extern struct platform_driver dswz_driver;
 
 static const struct platform_device_id cdc_id_table[] = {
 	{ "cdc", 0 },
@@ -449,14 +452,26 @@ static int cdc_remove (struct platform_device *pdev)
 	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
 	cdc_hw_setEnabled(cdc, false);
 
+	if(cdc->dswz)
+		put_device((struct device*) cdc->dswz);
+
 	drm_dev_unref(ddev);
 
 	return 0;
 }
 
+static int compare_name_dswz(struct device *dev, void *data)
+{
+	if(!dev->driver)
+		return 0;
+
+	return (strstr(dev->driver->name, "dswz") != NULL);
+}
+
 static int cdc_probe (struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
+	struct device *dswz_dev;
 	struct cdc_device *cdc;
 	struct drm_device *ddev;
 	struct resource *mem;
@@ -492,11 +507,11 @@ static int cdc_probe (struct platform_device *pdev)
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	cdc->mmio = devm_ioremap_resource(&pdev->dev, mem);
-	dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start,
-		cdc->mmio);
 	if (IS_ERR(cdc->mmio)) {
 		return PTR_ERR(cdc->mmio);
 	}
+	dev_dbg(&pdev->dev, "Mapped IO from 0x%x to 0x%p\n", mem->start,
+		cdc->mmio);
 
 	if(of_property_read_s32(pdev->dev.of_node, "max-clock-frequency", &max_clock)) {
 		cdc->max_clock_khz = 0;
@@ -554,6 +569,19 @@ static int cdc_probe (struct platform_device *pdev)
 		dev_info(&pdev->dev, "\tbus width: %u byte\n", cdc->hw.bus_width);
 	}
 
+	/* Spawn stream sub devices if available */
+	ret = devm_of_platform_populate(cdc->dev);
+
+	dswz_dev = device_find_child(cdc->dev, NULL, compare_name_dswz);
+	if(dswz_dev) {
+		dev_info(&pdev->dev, "\tdeswizzler: yes\n");
+		cdc->dswz = (struct dswz_device*) dswz_dev;
+		/* todo: build an aggregate driver? */
+	}
+	else {
+		dev_info(&pdev->dev, "\tdeswizzler: no\n");
+	}
+
 	cdc_layer_init(cdc);
 
 	cdc_hw_resetRegisters(cdc);
@@ -567,8 +595,6 @@ static int cdc_probe (struct platform_device *pdev)
 	}
 
 	ddev->irq_enabled = 1;
-
-
 
 	/* Register the DRM device with the core and the connectors with
 	 * sysfs.
@@ -598,7 +624,22 @@ static struct platform_driver cdc_platform_driver = {
 	.id_table = cdc_id_table,
 };
 
-module_platform_driver (cdc_platform_driver);
+static struct platform_driver * const drivers[] = {
+        &dswz_driver,
+	&cdc_platform_driver,
+};
+
+static int cdc_drv_init(void)
+{
+        return platform_register_drivers(drivers, ARRAY_SIZE(drivers));
+}
+module_init(cdc_drv_init);
+
+static void cdc_drv_exit(void)
+{
+        platform_unregister_drivers(drivers, ARRAY_SIZE(drivers));
+}
+module_exit(cdc_drv_exit);
 
 MODULE_AUTHOR("Christian Thaler <christian.thaler@tes-dst.com>");
 MODULE_DESCRIPTION("TES CDC Display Controller DRM Driver");

@@ -17,6 +17,8 @@
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 
+#include "cdc_deswizzle.h"
+
 /* CDC HW limitations */
 #define CDC_MAX_WIDTH  2047u
 #define CDC_MAX_HEIGHT 2047u
@@ -88,6 +90,8 @@ struct cdc_device {
 		wait_queue_head_t wait;
 		u32 pending;
 	} commit;
+
+	struct dswz_device *dswz; // NULL if deswizzler is not available
 
 	/* FIXME HACK for MesseDemo */
 	unsigned int irq_stat;
