@@ -72,15 +72,12 @@ static void setEnabled (struct cdc_device *cdc, bool enable)
 
 	control = cdc_read_reg(cdc, CDC_REG_GLOBAL_CONTROL);
 
-	if (enable)
-		control |= CDC_REG_GLOBAL_CONTROL_ENABLE
-			   | CDC_REG_GLOBAL_CONTROL_STREAM_ENABLE;
-	else
-		control &= ~CDC_REG_GLOBAL_CONTROL_ENABLE;
-
-	if(cdc->dswz) {
-		//control |= CDC_REG_GLOBAL_CONTROL_STREAM_ENABLE;
-		dswz_set_mode(cdc->dswz, DSWZ_MODE_TEST);
+	if (enable) {
+		control |= CDC_REG_GLOBAL_CONTROL_ENABLE |CDC_REG_GLOBAL_CONTROL_STREAM_ENABLE;
+	}
+	else {
+		control &= ~(CDC_REG_GLOBAL_CONTROL_ENABLE
+				|CDC_REG_GLOBAL_CONTROL_STREAM_ENABLE);
 	}
 
 	cdc_write_reg(cdc, CDC_REG_GLOBAL_CONTROL,control);

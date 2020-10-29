@@ -10,7 +10,7 @@ cdc-y := cdc_drv.o \
          cdc_hw.o \
          cdc_hw_helpers.o \
          cdc_deswizzle.o
-ccflags-y += -DDISABLE_ASSERTIONS
+ccflags-y += -DDISABLE_ASSERTIONS -DDEBUG
 
 SRC := $(shell pwd)
 

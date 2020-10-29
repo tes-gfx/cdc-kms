@@ -24,6 +24,7 @@
 #include "cdc_plane.h"
 #include "cdc_hw.h"
 #include "cdc_hw_helpers.h"
+#include "cdc_deswizzle.h"
 
 static struct cdc_device *to_cdc_dev (struct drm_crtc *c)
 {
@@ -189,6 +190,9 @@ void cdc_crtc_stop (struct drm_crtc *crtc)
 	drm_crtc_vblank_off(crtc);
 
 	cdc_hw_setEnabled(cdc, false);
+
+	if(cdc->dswz)
+		dswz_stop(cdc->dswz);
 }
 
 /******************************************************************************
@@ -273,6 +277,10 @@ static void cdc_crtc_atomic_flush (struct drm_crtc *crtc,
 	dev_dbg(cdc->dev, "%s (crtc: %p)\n", __func__, crtc);
 
 	dev_dbg(cdc->dev, "CRTC primary's crtc(crtc: %p)\n", crtc->primary->crtc);
+
+	if(cdc->dswz) {
+		dswz_trigger(cdc->dswz);
+	}
 
 	if (cdc->wait_for_vblank) {
 		/* Schedule shadow reload for next vblank and wait for it.

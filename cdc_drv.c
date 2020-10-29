@@ -303,10 +303,10 @@ long cdc_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 			struct hack_set_cb *set_cb =
 				(struct hack_set_cb*) stack_data;
 
-			cdc_hw_setCBAddress(cdc, 0,
-				(unsigned int) set_cb->phy_addr);
 			cdc_hw_layer_setCBSize(cdc, 0, set_cb->width,
 				set_cb->height, set_cb->pitch);
+			cdc_hw_setCBAddress(cdc, 0,
+				(unsigned int) set_cb->phy_addr);
 			cdc_hw_triggerShadowReload(cdc, true);
 			break;
 		}
@@ -452,9 +452,6 @@ static int cdc_remove (struct platform_device *pdev)
 	cdc_write_reg(cdc, CDC_REG_GLOBAL_IRQ_ENABLE, 0x0);
 	cdc_hw_setEnabled(cdc, false);
 
-	if(cdc->dswz)
-		put_device((struct device*) cdc->dswz);
-
 	drm_dev_unref(ddev);
 
 	return 0;
@@ -575,7 +572,7 @@ static int cdc_probe (struct platform_device *pdev)
 	dswz_dev = device_find_child(cdc->dev, NULL, compare_name_dswz);
 	if(dswz_dev) {
 		dev_info(&pdev->dev, "\tdeswizzler: yes\n");
-		cdc->dswz = (struct dswz_device*) dswz_dev;
+		cdc->dswz = (struct dswz_device*) dev_get_drvdata(dswz_dev);
 		/* todo: build an aggregate driver? */
 	}
 	else {
