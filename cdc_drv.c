@@ -78,6 +78,9 @@ static irqreturn_t cdc_irq (int irq, void *arg)
 
 	if (status & CDC_IRQ_LINE) {
 		cdc_crtc_irq(&cdc->crtc);
+		if(cdc->dswz) {
+			dswz_retrigger(cdc->dswz);
+		}
 	}
 	if (status & CDC_IRQ_BUS_ERROR) {
 		dev_err_ratelimited(cdc->dev, "BUS error IRQ triggered\n");
@@ -307,6 +310,10 @@ long cdc_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 				set_cb->height, set_cb->pitch);
 			cdc_hw_setCBAddress(cdc, 0,
 				(unsigned int) set_cb->phy_addr);
+			if(cdc->dswz) {
+				dswz_set_fb_addr(cdc->dswz, set_cb->phy_addr);
+				dswz_retrigger(cdc->dswz);
+			}
 			cdc_hw_triggerShadowReload(cdc, true);
 			break;
 		}

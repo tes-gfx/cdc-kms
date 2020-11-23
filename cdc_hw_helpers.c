@@ -134,9 +134,6 @@ void cdc_hw_setCBAddress (struct cdc_device *cdc, int layer, dma_addr_t address)
 {
 	//TODO: check address alignment
 	cdc_write_layer_reg(cdc, layer, CDC_REG_LAYER_FB_START, address);
-	if(cdc->dswz) {
-		dswz_set_fb_addr(cdc->dswz, address);
-	}
 }
 
 void cdc_hw_layer_setEnabled (struct cdc_device *cdc, int layer, bool enable)

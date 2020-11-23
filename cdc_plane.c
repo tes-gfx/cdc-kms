@@ -35,12 +35,16 @@ void cdc_plane_setup_fb(struct cdc_plane *plane)
 	struct drm_framebuffer *fb = plane->plane.state->fb;
 	struct drm_gem_cma_object *gem;
 	unsigned int byte_offset;
+	dma_addr_t fb_addr;
 
 	byte_offset = (plane->plane.state->src_y >> 16) * fb->pitches[0]
 		+ (plane->plane.state->src_x >> 16) * (fb->format->cpp[0] * 8);
 	gem = drm_fb_cma_get_gem_obj(fb, 0);
-	cdc_hw_setCBAddress(cdc, layer,
-		gem->paddr + fb->offsets[0] + byte_offset);
+	fb_addr = gem->paddr + fb->offsets[0] + byte_offset;
+	cdc_hw_setCBAddress(cdc, layer, fb_addr);
+	if(cdc->dswz) {
+		dswz_set_fb_addr(cdc->dswz, fb_addr);
+	}
 }
 
 void cdc_plane_setup_window(struct drm_plane *plane)

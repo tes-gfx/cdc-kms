@@ -2,6 +2,7 @@
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
+#include <linux/delay.h>
 
 #include "cdc_deswizzle.h"
 
@@ -24,6 +25,7 @@ struct dswz_device {
 	u32 fb_pitch; /* byte pitch */
 	u8  fb_bpp;   /* bytes per pixel */
 	int mode;
+	int mode_update; /* boolean: mode needs update */
 };
 
 static u32 dswz_read_reg (struct dswz_device *dswz, u32 reg)
@@ -38,16 +40,26 @@ static void dswz_write_reg(struct dswz_device *dswz, u32 reg, u32 val)
 
 void dswz_set_mode(struct dswz_device *dswz, int mode)
 {
+	dev_dbg(dswz->dev, "%s\n", __func__);
+
+	if(dswz->mode != mode) {
+		dswz_write_reg(dswz, DSWZ_REG_MODE, DSWZ_MODE_DISABLED);
+		dswz->mode_update = 1;
+	}
 	dswz->mode = mode;
 }
 
 void dswz_set_fb_addr(struct dswz_device *dswz, u32 addr)
 {
+	dev_dbg(dswz->dev, "%s\n", __func__);
+
 	dswz->fb_addr = addr;
 }
 
 void dswz_set_fb_config(struct dswz_device *dswz, u16 width, u16 height, u32 pitch, u8 bpp)
 {
+	dev_dbg(dswz->dev, "%s\n", __func__);
+
 	dswz->fb_width = width;
 	dswz->fb_height = height;
 	dswz->fb_pitch = pitch;
@@ -56,12 +68,16 @@ void dswz_set_fb_config(struct dswz_device *dswz, u16 width, u16 height, u32 pit
 
 void dswz_stop(struct dswz_device *dswz)
 {
+	dev_dbg(dswz->dev, "%s\n", __func__);
+
 	dswz->mode = DSWZ_MODE_DISABLED;
 	dswz_write_reg(dswz, DSWZ_REG_MODE, dswz->mode);
 }
 
 void dswz_trigger(struct dswz_device *dswz)
 {
+	dev_dbg(dswz->dev, "%s\n", __func__);
+
 	dswz->mode = DSWZ_MODE_LINEAR;
 	dswz_write_reg(dswz, DSWZ_REG_FB_DIM, (dswz->fb_height << 16) | dswz->fb_width);
 	dswz_write_reg(dswz, DSWZ_REG_FB_PITCH, (dswz->fb_bpp << 24) | dswz->fb_pitch);
@@ -71,7 +87,12 @@ void dswz_trigger(struct dswz_device *dswz)
 
 void dswz_retrigger(struct dswz_device *dswz)
 {
-	/* In test mode, we have to regtrigger the core by a write to the mode
+	if(dswz->mode_update) {
+		dswz->mode_update = 0;
+		dswz_write_reg(dswz, DSWZ_REG_MODE, dswz->mode);
+	}
+
+	/* In test mode, we have to retrigger the core by a write to the mode
 	 * register. For linear/deswizzle the core is triggered by writing
 	 * the FB address.
 	 */
@@ -97,7 +118,7 @@ static irqreturn_t dswz_irq (int irq, void *arg)
 	status = dswz_read_reg(dswz, DSWZ_REG_IRQ_STATUS);
 	dswz_write_reg(dswz, DSWZ_REG_IRQ_STATUS, status);
 
-	dswz_retrigger(dswz);
+	//dswz_retrigger(dswz);
 
 	return IRQ_HANDLED;
 }
