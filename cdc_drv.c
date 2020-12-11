@@ -312,6 +312,7 @@ long cdc_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 				(unsigned int) set_cb->phy_addr);
 			if(cdc->dswz) {
 				dswz_set_fb_addr(cdc->dswz, set_cb->phy_addr);
+				dswz_set_mode(cdc->dswz, DSWZ_MODE_DESWIZZLE);
 				dswz_retrigger(cdc->dswz);
 			}
 			cdc_hw_triggerShadowReload(cdc, true);
@@ -608,6 +609,12 @@ static int cdc_probe (struct platform_device *pdev)
 		goto error;
 
 	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
+
+	/* DSWZ driver needs retriggering in every frame. So we increase
+	 * the use counter of the vblank.
+	 */
+	if(cdc->dswz)
+		drm_crtc_vblank_get(&cdc->crtc);
 
 	return 0;
 
