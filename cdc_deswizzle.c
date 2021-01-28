@@ -30,7 +30,11 @@ struct dswz_device {
 
 static u32 dswz_read_reg (struct dswz_device *dswz, u32 reg)
 {
-	return ioread32(dswz->mmio + (reg * 4));
+	u32 val;
+
+	val = ioread32(dswz->mmio + (reg * 4));
+
+	return val;
 }
 
 static void dswz_write_reg(struct dswz_device *dswz, u32 reg, u32 val)
@@ -40,7 +44,7 @@ static void dswz_write_reg(struct dswz_device *dswz, u32 reg, u32 val)
 
 void dswz_set_mode(struct dswz_device *dswz, int mode)
 {
-	dev_dbg(dswz->dev, "%s\n", __func__);
+	dev_dbg(dswz->dev, "%s(%d)\n", __func__, mode);
 
 	if(dswz->mode != mode) {
 		dswz_write_reg(dswz, DSWZ_REG_MODE, DSWZ_MODE_DISABLED);
